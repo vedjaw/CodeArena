@@ -1,0 +1,89 @@
+{% extends "base/app.html" %}
+{% block title %}User management — CodeArena{% endblock %}
+{% block crumb_label %}Admin · Users{% endblock %}
+
+{% block app_content %}
+<div class="page-head">
+    <div>
+        <div class="eyebrow">/ SYS · USERS</div>
+        <h1>User management.</h1>
+        <p class="sub t-mono">Provision, deactivate, and search across all roles.</p>
+    </div>
+    <a href="{% url 'dashboard:admin' %}" class="btn btn-secondary">
+        <svg class="i"><use href="#i-arrow-l"/></svg>
+        <span>Overview</span>
+    </a>
+</div>
+
+<form method="get" class="module mb-4">
+    <div class="module-body" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+        <div class="form-group" style="flex:1;min-width:280px;margin:0;">
+            <label>Search</label>
+            <div style="position:relative;">
+                <svg class="i" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--chalk-3);"><use href="#i-search"/></svg>
+                <input type="text" name="search" value="{{ search }}" placeholder="name, email…" style="padding-left:36px;">
+            </div>
+        </div>
+        <div class="form-group" style="min-width:200px;margin:0;">
+            <label>Role</label>
+            <select name="role">
+                <option value="">All roles</option>
+                <option value="admin" {% if role_filter == 'admin' %}selected{% endif %}>Admin</option>
+                <option value="recruiter" {% if role_filter == 'recruiter' %}selected{% endif %}>Recruiter</option>
+                <option value="candidate" {% if role_filter == 'candidate' %}selected{% endif %}>Candidate</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-secondary">
+            <svg class="i"><use href="#i-filter"/></svg>
+            <span>Filter</span>
+        </button>
+    </div>
+</form>
+
+<section class="module">
+    <div class="module-head">
+        <h3>Registered users</h3>
+        <span class="t-label">{{ users|length }} record{{ users|length|pluralize }}</span>
+    </div>
+    <div class="module-body tight">
+        <table class="dgrid">
+            <thead>
+                <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td class="cell-strong">{{ u.get_full_name|default:"—" }}</td>
+                    <td class="cell-mono t-small t-muted">{{ u.email }}</td>
+                    <td><span class="badge badge-purple">{{ u.get_role_display }}</span></td>
+                    <td>
+                        {% if u.is_active %}
+                            <span class="badge badge-success">Active</span>
+                        {% else %}
+                            <span class="badge badge-danger">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td class="cell-mono t-small t-muted">{{ u.date_joined|date:"M d, Y" }}</td>
+                    <td>
+                        <form method="post" action="{% url 'dashboard:admin_toggle_user' user_id=u.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm {% if u.is_active %}btn-danger{% else %}btn-success{% endif %}">
+                                {% if u.is_active %}
+                                <svg class="i"><use href="#i-x"/></svg>
+                                <span>Deactivate</span>
+                                {% else %}
+                                <svg class="i"><use href="#i-check"/></svg>
+                                <span>Activate</span>
+                                {% endif %}
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6"><div class="empty" style="margin:16px;"><svg class="i icon"><use href="#i-users"/></svg><h3>No users match these filters</h3></div></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

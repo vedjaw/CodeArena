@@ -1,0 +1,58 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0a0a0c" id="meta-theme-color">
+    <meta name="description" content="{% block meta_description %}CodeArena — Engineering-grade coding assessment platform.{% endblock %}">
+    <title>{% block title %}CodeArena{% endblock %}</title>
+    <script>
+    (function(){
+      var t = localStorage.getItem('ca-theme');
+      if (!t) t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+      var m = document.querySelector('#meta-theme-color');
+      if (m) m.content = t === 'light' ? '#ffffff' : '#0a0a0c';
+    })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/main.css' %}?v=20260512d">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+    {% include "base/icons.html" %}
+
+    {% if messages %}
+    <div class="msg-stack" style="position:fixed;top:72px;right:24px;z-index:999;max-width:420px;display:flex;flex-direction:column;gap:8px;">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}" onclick="this.remove()">
+            <svg class="i"><use href="#i-{% if message.tags == 'success' %}check{% elif message.tags == 'error' or message.tags == 'warning' %}alert{% else %}question{% endif %}"/></svg>
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+
+    {% block extra_js %}{% endblock %}
+    <script>
+        document.querySelectorAll('.alert').forEach(a => {
+            setTimeout(() => { a.style.opacity = 0; a.style.transform = 'translateX(8px)'; a.style.transition = 'all 300ms'; }, 4500);
+            setTimeout(() => a.remove(), 5000);
+        });
+
+        function caToggleTheme() {
+            var cur = document.documentElement.getAttribute('data-theme') || 'dark';
+            var next = cur === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('ca-theme', next);
+            var m = document.querySelector('#meta-theme-color');
+            if (m) m.content = next === 'light' ? '#ffffff' : '#0a0a0c';
+        }
+    </script>
+</body>
+</html>

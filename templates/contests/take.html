@@ -1,0 +1,501 @@
+{% load static %}
+{% load custom_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ contest.title }} — CodeArena IDE</title>
+    <script>
+    (function(){
+      var t = localStorage.getItem('ca-theme');
+      if (!t) t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/main.css' %}?v=20260512d">
+    <link rel="stylesheet" href="{% static 'css/ide.css' %}?v=20260512d">
+</head>
+<body class="ide-body">
+    {% include "base/icons.html" %}
+
+    <div class="ide-shell">
+        {# ── Top bar ─────────────────────────────────────────────── #}
+        <header class="ide-top">
+            <div class="ide-brand">
+                <svg class="i i-lg"><use href="#i-mark"/></svg>
+                <span>CodeArena</span>
+                <span class="ver">IDE</span>
+            </div>
+
+            <div class="ide-title">
+                <span class="ctx">/ {{ contest.slug|upper }} · Q{{ forloop.counter }} of {{ questions|length }}</span>
+                <span class="name">{{ contest.title }}</span>
+            </div>
+
+            <div class="ide-top-right">
+                <button class="theme-toggle" onclick="caToggleTheme()" title="Toggle theme" aria-label="Toggle theme">
+                    <svg class="i t-icon-sun"><use href="#i-sun"/></svg>
+                    <svg class="i t-icon-moon"><use href="#i-moon"/></svg>
+                </button>
+                <div class="timer" id="timer">
+                    <span class="timer-dot"></span>
+                    <span id="timer-text">--:--:--</span>
+                </div>
+                <form method="post" action="{% url 'contests:submit' slug=contest.slug %}" id="submit-contest-form" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('Submit the entire contest? This action is final.')">
+                        <svg class="i"><use href="#i-send"/></svg>
+                        <span>End contest</span>
+                    </button>
+                </form>
+            </div>
+        </header>
+
+        {# ── Main split ──────────────────────────────────────────── #}
+        <div class="ide-main">
+            {# Question rail #}
+            <aside class="ide-aside">
+                <div class="ide-aside-head">
+                    <span class="h">Questions · {{ questions|length }}</span>
+                    <span class="t-mono t-micro t-signal">LIVE</span>
+                </div>
+                <div class="ide-aside-list">
+                    {% for q in questions %}
+                    <a href="?q={{ q.id }}" class="q-item {% if current_question.id == q.id %}active{% endif %}">
+                        <div class="q-chip {% if q.id in drafts and drafts|get_item:q.id %}answered{% elif current_question.id == q.id %}current{% endif %}">{{ forloop.counter|stringformat:"02d" }}</div>
+                        <div style="flex:1;min-width:0;">
+                            <div class="q-title">{{ q.title|truncatechars:30 }}</div>
+                            <div class="q-sub">
+                                {% if q.question_type == 'coding' %}CODING
+                                {% elif q.question_type == 'mcq_single' %}MCQ
+                                {% elif q.question_type == 'mcq_multiple' %}MULTI-MCQ
+                                {% else %}SUBJECTIVE{% endif %}
+                                · {{ q.marks }} pts
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </aside>
+
+            {# Workbench #}
+            <section class="ide-bench" id="ide-bench">
+                {% if current_question %}
+                {% if current_question.question_type == 'coding' %}
+                {# CODING #}
+                <div class="ide-problem">
+                    <div class="ide-problem-head">
+                        <span class="h">/ Problem statement</span>
+                        <span class="badge {% if current_question.difficulty == 'easy' %}badge-success{% elif current_question.difficulty == 'medium' %}badge-warning{% else %}badge-danger{% endif %}">{{ current_question.get_difficulty_display }}</span>
+                    </div>
+                    <div class="ide-problem-body">
+                        <div class="t-label">/ Q{{ forloop.counter }} · {{ current_question.marks }} pts</div>
+                        <h2>{{ current_question.title }}</h2>
+                        <p>{{ current_question.coding_detail.problem_statement|linebreaks }}</p>
+
+                        {% if current_question.coding_detail.input_format %}
+                        <h3>Input format</h3>
+                        <pre>{{ current_question.coding_detail.input_format }}</pre>
+                        {% endif %}
+                        {% if current_question.coding_detail.output_format %}
+                        <h3>Output format</h3>
+                        <pre>{{ current_question.coding_detail.output_format }}</pre>
+                        {% endif %}
+                        {% if current_question.coding_detail.constraints %}
+                        <h3>Constraints</h3>
+                        <pre>{{ current_question.coding_detail.constraints }}</pre>
+                        {% endif %}
+                        {% if current_question.coding_detail.sample_input %}
+                        <h3>Sample input</h3>
+                        <pre>{{ current_question.coding_detail.sample_input }}</pre>
+                        {% endif %}
+                        {% if current_question.coding_detail.sample_output %}
+                        <h3>Sample output</h3>
+                        <pre>{{ current_question.coding_detail.sample_output }}</pre>
+                        {% endif %}
+                        {% if current_question.coding_detail.explanation %}
+                        <h3>Explanation</h3>
+                        <p>{{ current_question.coding_detail.explanation }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="ide-editor-col">
+                    <div class="ide-editor-head">
+                        <div class="left">
+                            <svg class="i" style="color:var(--signal);"><use href="#i-code"/></svg>
+                            <select id="language-select">
+                                {% for lang in current_question.coding_detail.allowed_languages %}
+                                <option value="{{ lang }}">{{ lang|title }}</option>
+                                {% endfor %}
+                            </select>
+                            <span class="t-mono t-micro t-muted">/ autosave · 30s</span>
+                        </div>
+                        <div class="right">
+                            <button class="btn btn-secondary btn-sm" id="run-btn" onclick="runCode(false)">
+                                <svg class="i"><use href="#i-play"/></svg>
+                                <span>Run</span>
+                            </button>
+                            <button class="btn btn-primary btn-sm" id="submit-btn" onclick="runCode(true)">
+                                <svg class="i"><use href="#i-send"/></svg>
+                                <span>Submit</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="ide-editor-area">
+                        <textarea id="code-editor" spellcheck="false" autocomplete="off">{% with draft=drafts|get_item:current_question.id %}{% if draft %}{{ draft.source_code }}{% elif current_question.coding_detail.starter_code.python %}{{ current_question.coding_detail.starter_code.python }}{% else %}# Write your code here
+{% endif %}{% endwith %}</textarea>
+                    </div>
+
+                    <div class="ide-console">
+                        <div class="ide-console-tabs">
+                            <div class="ide-console-tab active" data-tab="output" onclick="showTab('output', event)">
+                                <svg class="i"><use href="#i-terminal"/></svg>
+                                <span>Output</span>
+                            </div>
+                            <div class="ide-console-tab" data-tab="input" onclick="showTab('input', event)">
+                                <svg class="i"><use href="#i-inbox"/></svg>
+                                <span>Stdin</span>
+                            </div>
+                            <div class="ide-console-tab" data-tab="results" onclick="showTab('results', event)">
+                                <svg class="i"><use href="#i-target"/></svg>
+                                <span>Test results</span>
+                            </div>
+                            <div class="ide-console-spacer"></div>
+                            <div class="ide-console-meta" id="console-meta">/ idle</div>
+                        </div>
+                        <div class="ide-console-body" id="console-body">
+                            <div id="tab-output"><span class="muted">→ run code to see output here.</span></div>
+                            <div id="tab-input" class="hidden"><textarea id="custom-input" placeholder="Provide custom stdin here..."></textarea></div>
+                            <div id="tab-results" class="hidden"><span class="muted">→ submit code to see test results.</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                {% elif current_question.question_type in 'mcq_single,mcq_multiple' %}
+                {# MCQ #}
+                <div class="mcq-pane" style="grid-column: 1 / -1;">
+                    <div class="t-label">/ Q{{ forloop.counter }} · {{ current_question.get_question_type_display|upper }} · {{ current_question.marks }} pts</div>
+                    <h2 style="font-size: 1.6rem; font-weight: 700; margin: 12px 0 24px; letter-spacing: -0.02em;">{{ current_question.title }}</h2>
+                    <div class="question-card t-body">{{ current_question.mcq_detail.question_text|linebreaks }}</div>
+                    <div id="mcq-options">
+                        {% for opt in current_question.mcq_detail.options.all %}
+                        <label class="mcq-option">
+                            <span class="letter">{{ forloop.counter|stringformat:"d" }}</span>
+                            {% if current_question.question_type == 'mcq_single' %}
+                            <input type="radio" name="mcq_answer" value="{{ opt.id }}">
+                            {% else %}
+                            <input type="checkbox" name="mcq_answer" value="{{ opt.id }}">
+                            {% endif %}
+                            <span>{{ opt.option_text }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <button class="btn btn-primary mt-4" onclick="submitMCQ()">
+                        <svg class="i"><use href="#i-check"/></svg>
+                        <span>Save answer</span>
+                    </button>
+                </div>
+
+                {% elif current_question.question_type == 'subjective' %}
+                {# SUBJECTIVE #}
+                <div class="subj-pane" style="grid-column: 1 / -1;">
+                    <div class="t-label">/ Q{{ forloop.counter }} · SUBJECTIVE · {{ current_question.marks }} pts</div>
+                    <h2 style="font-size: 1.6rem; font-weight: 700; margin: 12px 0 24px; letter-spacing: -0.02em;">{{ current_question.title }}</h2>
+                    <div class="question-card t-body">{{ current_question.subjective_detail.question_text|linebreaks }}</div>
+                    <textarea id="subjective-answer" rows="12" placeholder="Write your answer..."></textarea>
+                    <div class="t-mono t-micro t-muted mt-2">Max {{ current_question.subjective_detail.max_word_count }} words</div>
+                    <button class="btn btn-primary mt-3" onclick="submitSubjective()">
+                        <svg class="i"><use href="#i-check"/></svg>
+                        <span>Save answer</span>
+                    </button>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="empty" style="grid-column: 1 / -1; margin: 80px 32px;">
+                    <svg class="i icon"><use href="#i-doc"/></svg>
+                    <h3>No questions in this contest</h3>
+                    <p>Contact your recruiter — the contest appears empty.</p>
+                </div>
+                {% endif %}
+            </section>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="violation-modal">
+        <div class="modal">
+            <div class="row-tight mb-2">
+                <svg class="i i-lg" style="color:var(--red);"><use href="#i-alert"/></svg>
+                <h2 style="color:var(--red);margin:0;">Violation detected</h2>
+            </div>
+            <p id="violation-message"></p>
+            <button class="btn btn-primary" onclick="document.getElementById('violation-modal').classList.add('hidden')">
+                <svg class="i"><use href="#i-check"/></svg>
+                <span>Understood</span>
+            </button>
+        </div>
+    </div>
+
+    {% if contest.fullscreen_required %}
+    <div class="modal-overlay" id="fullscreen-modal">
+        <div class="modal text-center">
+            <div class="row-tight" style="justify-content:center;margin-bottom:12px;">
+                <svg class="i i-lg" style="color:var(--signal);"><use href="#i-monitor"/></svg>
+                <h2 style="margin:0;">Fullscreen required</h2>
+            </div>
+            <p>This contest is locked to fullscreen. Click below to enter fullscreen mode and begin.</p>
+            <button class="btn btn-primary btn-lg" onclick="enterFullscreen()">
+                <svg class="i"><use href="#i-play"/></svg>
+                <span>Enter fullscreen</span>
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if current_question.question_type == 'coding' %}
+    {{ current_question.coding_detail.starter_code|json_script:"starter-code-data" }}
+    {% endif %}
+    <script>
+    function caToggleTheme() {
+        var cur = document.documentElement.getAttribute('data-theme') || 'dark';
+        var next = cur === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('ca-theme', next);
+    }
+
+    const CONTEST_SLUG = '{{ contest.slug }}';
+    const QUESTION_ID = {{ current_question.id|default:"0" }};
+    const DEADLINE = '{{ deadline_timestamp }}';
+    const CSRF = '{{ csrf_token }}';
+    const MAX_VIOLATIONS = {{ contest.max_violations }};
+
+    function updateTimer() {
+        const deadline = new Date(DEADLINE);
+        const now = new Date();
+        let diff = Math.max(0, Math.floor((deadline - now) / 1000));
+        const h = String(Math.floor(diff / 3600)).padStart(2, '0');
+        const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+        const s = String(diff % 60).padStart(2, '0');
+        const el = document.getElementById('timer');
+        const txt = document.getElementById('timer-text');
+        if (txt) txt.textContent = `${h}:${m}:${s}`;
+        if (!el) return;
+        el.classList.remove('warning', 'danger');
+        if (diff <= 300) el.classList.add('danger');
+        else if (diff <= 600) el.classList.add('warning');
+        if (diff <= 0) {
+            document.getElementById('submit-contest-form').submit();
+        }
+    }
+    setInterval(updateTimer, 1000);
+    updateTimer();
+
+    function setMeta(text) {
+        const el = document.getElementById('console-meta');
+        if (el) el.textContent = text;
+    }
+
+    function runCode(isSubmit) {
+        const btn = isSubmit ? document.getElementById('submit-btn') : document.getElementById('run-btn');
+        const orig = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<svg class="i"><use href="#i-clock"/></svg><span>Executing…</span>';
+        setMeta(isSubmit ? '/ submitting…' : '/ running…');
+
+        const code = document.getElementById('code-editor').value;
+        const lang = document.getElementById('language-select').value;
+        const customInput = document.getElementById('custom-input')?.value || '';
+
+        fetch(`/submissions/code/${CONTEST_SLUG}/${QUESTION_ID}/`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+            body: JSON.stringify({source_code: code, language: lang, is_run: !isSubmit, custom_input: customInput}),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) { showOutput(data.error, 'err'); return; }
+            pollResult(data.submission_id, isSubmit);
+        })
+        .catch(e => showOutput('Error: ' + e.message, 'err'))
+        .finally(() => { btn.disabled = false; btn.innerHTML = orig; });
+    }
+
+    function pollResult(subId, isSubmit) {
+        let attempts = 0;
+        const poll = setInterval(() => {
+            fetch(`/submissions/status/${subId}/`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.verdict === 'pending' || data.verdict === 'queued' || data.verdict === 'running') {
+                    setMeta(`/ ${data.verdict}… (attempt ${attempts+1})`);
+                    if (++attempts > 30) { clearInterval(poll); showOutput('Execution timed out', 'err'); setMeta('/ timed out'); }
+                    return;
+                }
+                clearInterval(poll);
+                setMeta(`/ ${data.verdict_display || data.verdict}`);
+                if (isSubmit) showResults(data);
+                else showOutput(data.runtime_output || data.compiler_output || 'No output');
+            });
+        }, 1000);
+    }
+
+    function showOutput(text, cls) {
+        showTab('output');
+        const el = document.getElementById('tab-output');
+        el.innerHTML = '';
+        const pre = document.createElement('div');
+        if (cls) pre.className = cls;
+        pre.style.whiteSpace = 'pre-wrap';
+        pre.textContent = text;
+        el.appendChild(pre);
+    }
+
+    function showResults(data) {
+        showTab('results');
+        const el = document.getElementById('tab-results');
+        let html = `<div class="verdict verdict-${data.verdict}">${data.verdict_display || data.verdict}</div>`;
+        html += `<div class="t-mono t-small" style="margin-bottom: 12px;">Score: <span class="t-signal">${data.score}</span> · ${data.passed_test_cases}/${data.total_test_cases} cases passed`;
+        if (data.execution_time_ms) html += ` · ${data.execution_time_ms}ms`;
+        html += `</div>`;
+        if (data.test_case_results) {
+            html += '<div class="tc-strip">';
+            data.test_case_results.forEach((tc, i) => {
+                html += `<span class="tc-chip ${tc.passed ? 'pass' : 'fail'}">TC${String(i+1).padStart(2,'0')}</span>`;
+            });
+            html += '</div>';
+            data.test_case_results.forEach((tc, i) => {
+                html += `<div class="testcase-result ${tc.passed ? 'pass' : 'fail'}">
+                    <div class="label">TC#${String(i+1).padStart(2,'0')} · ${tc.verdict}${tc.time_ms ? ' · ' + tc.time_ms + 'ms' : ''}</div>
+                    ${!tc.is_hidden && tc.actual_output ? '<div>output: ' + tc.actual_output + '</div>' : ''}
+                </div>`;
+            });
+        }
+        el.innerHTML = html;
+    }
+
+    function showTab(name, evt) {
+        document.querySelectorAll('.ide-console-tab').forEach(t => t.classList.remove('active'));
+        ['output','input','results'].forEach(t => {
+            const el = document.getElementById('tab-'+t);
+            if (el) el.classList.add('hidden');
+        });
+        document.getElementById('tab-'+name).classList.remove('hidden');
+        const targetTab = document.querySelector(`.ide-console-tab[data-tab="${name}"]`);
+        if (targetTab) targetTab.classList.add('active');
+    }
+
+    function submitMCQ() {
+        const selected = Array.from(document.querySelectorAll('input[name="mcq_answer"]:checked')).map(i => i.value);
+        fetch(`/submissions/mcq/${CONTEST_SLUG}/${QUESTION_ID}/`, {
+            method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+            body: JSON.stringify({selected_options: selected}),
+        }).then(r => r.json()).then(d => alert(d.status === 'submitted' ? 'Answer saved' : 'Error'));
+    }
+
+    function submitSubjective() {
+        const text = document.getElementById('subjective-answer').value;
+        fetch(`/submissions/subjective/${CONTEST_SLUG}/${QUESTION_ID}/`, {
+            method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+            body: JSON.stringify({answer_text: text}),
+        }).then(r => r.json()).then(d => alert(d.status === 'submitted' ? 'Answer saved' : 'Error'));
+    }
+
+    // Auto-save drafts
+    setInterval(() => {
+        const code = document.getElementById('code-editor')?.value;
+        if (!code || !QUESTION_ID) return;
+        const lang = document.getElementById('language-select')?.value || 'python';
+        fetch(`/submissions/draft/${CONTEST_SLUG}/${QUESTION_ID}/`, {
+            method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+            body: JSON.stringify({source_code: code, language: lang}),
+        }).catch(() => {});
+    }, 30000);
+
+    // Language change
+    let isConfirming = false;
+    document.getElementById('language-select')?.addEventListener('change', function() {
+        const newLang = this.value;
+        const editor = document.getElementById('code-editor');
+        if (!editor) return;
+        isConfirming = true;
+        const userAgreed = confirm('Changing the language will overwrite your current code with the default template. Continue?');
+        setTimeout(() => { isConfirming = false; }, 500);
+        if (userAgreed) {
+            let starterCode = {};
+            try { starterCode = JSON.parse(document.getElementById('starter-code-data').textContent); } catch (e) {}
+            editor.value = starterCode[newLang] || '# Write your code here';
+        }
+    });
+
+    // Tab/key support in editor
+    const editor = document.getElementById('code-editor');
+    if (editor) {
+        editor.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 4;
+            }
+        });
+    }
+
+    {% if contest.enable_proctoring %}
+    let lastViolationTime = 0;
+    function reportViolation(type, desc) {
+        const now = Date.now();
+        if (now - lastViolationTime < 2000) return;
+        lastViolationTime = now;
+        fetch(`/proctoring/violation/${CONTEST_SLUG}/`, {
+            method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+            body: JSON.stringify({type: type, description: desc}),
+        }).then(r => r.json()).then(data => {
+            if (data.auto_submitted) {
+                alert('Maximum violations exceeded. Contest auto-submitted.');
+                window.location.href = '/contests/{{ contest.slug }}/';
+                return;
+            }
+            document.getElementById('violation-message').textContent = data.warning;
+            document.getElementById('violation-modal').classList.remove('hidden');
+        });
+    }
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) reportViolation('tab_switch', 'Switched tab');
+    });
+    window.addEventListener('blur', () => {
+        if (!isConfirming) reportViolation('window_blur', 'Window lost focus');
+    });
+    document.addEventListener('copy', e => { e.preventDefault(); reportViolation('copy_paste', 'Copy attempted'); });
+    document.addEventListener('paste', e => { e.preventDefault(); reportViolation('copy_paste', 'Paste attempted'); });
+    document.addEventListener('contextmenu', e => { e.preventDefault(); reportViolation('right_click', 'Right click'); });
+    document.addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && ['c','v','u','s','p'].includes(e.key.toLowerCase())) {
+            if (e.target.id === 'code-editor' && ['c','v'].includes(e.key.toLowerCase())) return;
+            e.preventDefault();
+            reportViolation('shortcut_key', `Blocked: ${e.key}`);
+        }
+    });
+
+    {% if contest.fullscreen_required %}
+    function enterFullscreen() {
+        let elem = document.documentElement;
+        if (elem.requestFullscreen) elem.requestFullscreen();
+        else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+        document.getElementById('fullscreen-modal').classList.add('hidden');
+    }
+    document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement) {
+            document.getElementById('fullscreen-modal').classList.remove('hidden');
+            reportViolation('fullscreen_exit', 'Exited fullscreen');
+        }
+    });
+    {% endif %}
+    {% endif %}
+    </script>
+</body>
+</html>

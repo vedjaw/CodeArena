@@ -1,0 +1,153 @@
+{% extends "base/app.html" %}
+{% block title %}Workspace — CodeArena{% endblock %}
+{% block crumb_label %}Candidate · Overview{% endblock %}
+
+{% block app_content %}
+<div class="page-head rise">
+    <div>
+        <div class="eyebrow">/ DEV · OVERVIEW</div>
+        <h1>{{ user.first_name|default:"Engineer" }}, the arena is open.</h1>
+        <p class="sub t-mono">Session ID · {{ user.id|stringformat:"04x" }} · {{ user.email }}</p>
+    </div>
+    <div class="row-tight">
+        <a href="{% url 'contests:list' %}" class="btn btn-primary">
+            <svg class="i"><use href="#i-arena"/></svg>
+            <span>Browse contests</span>
+        </a>
+    </div>
+</div>
+
+{# ─ KPI strip ─ #}
+<div class="kpi-strip rise rise-1 mb-4">
+    <div class="kpi accent">
+        <div class="kpi-label">Contests taken</div>
+        <div class="kpi-value">{{ total_contests_taken|default:"0" }}</div>
+        <div class="kpi-delta">→ across {{ recent_submissions|length }} submissions</div>
+    </div>
+    <div class="kpi violet">
+        <div class="kpi-label">Ongoing</div>
+        <div class="kpi-value">{{ ongoing_contests|length }}</div>
+        <div class="kpi-delta">→ active sessions</div>
+    </div>
+    <div class="kpi cyan">
+        <div class="kpi-label">Upcoming</div>
+        <div class="kpi-value">{{ upcoming_contests|length }}</div>
+        <div class="kpi-delta">→ scheduled</div>
+    </div>
+    <div class="kpi amber">
+        <div class="kpi-label">Avg. response</div>
+        <div class="kpi-value">~80<span style="font-size:1.2rem;">ms</span></div>
+        <div class="kpi-delta">→ sandbox cold-start</div>
+    </div>
+</div>
+
+<div class="grid-12">
+    {# ─ Ongoing block (primary) ─ #}
+    <div style="grid-column: span 8;" class="stack-4 rise rise-2">
+        {% if ongoing_contests %}
+        <section class="module">
+            <div class="module-head">
+                <h3>Ongoing · Enter the arena</h3>
+                <span class="badge badge-live">LIVE · {{ ongoing_contests|length }}</span>
+            </div>
+            <div class="module-body" style="display:flex;flex-direction:column;gap:12px;">
+                {% for c in ongoing_contests %}
+                <div class="brief live">
+                    <div class="brief-top">
+                        <div>
+                            <div class="brief-id">/ {{ c.slug|upper }}</div>
+                            <h3 style="margin-top:6px;">{{ c.title }}</h3>
+                        </div>
+                        <span class="badge badge-live">Live</span>
+                    </div>
+                    <div class="meta">
+                        <span class="meta-item"><svg class="i"><use href="#i-clock"/></svg>{{ c.duration_minutes }}m duration</span>
+                        <span class="meta-item"><svg class="i"><use href="#i-doc"/></svg>{{ c.question_count }} questions</span>
+                        <span class="meta-item"><svg class="i"><use href="#i-calendar"/></svg>Ends {{ c.end_time|date:"M d, H:i" }}</span>
+                    </div>
+                    <div class="brief-foot">
+                        <span class="t-mono t-small t-muted">Awaiting submission</span>
+                        <a href="{% url 'contests:detail' slug=c.slug %}" class="btn btn-primary btn-sm">
+                            <svg class="i"><use href="#i-play"/></svg>
+                            <span>Enter</span>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if upcoming_contests %}
+        <section class="module">
+            <div class="module-head">
+                <h3>Upcoming · On the schedule</h3>
+                <span class="t-label">{{ upcoming_contests|length }} queued</span>
+            </div>
+            <div class="module-body" style="display:flex;flex-direction:column;gap:12px;">
+                {% for c in upcoming_contests %}
+                <div class="brief upcoming">
+                    <div class="brief-top">
+                        <div>
+                            <div class="brief-id">/ {{ c.slug|upper }}</div>
+                            <h3 style="margin-top:6px;">{{ c.title }}</h3>
+                        </div>
+                        <span class="badge badge-info">Upcoming</span>
+                    </div>
+                    <div class="meta">
+                        <span class="meta-item"><svg class="i"><use href="#i-clock"/></svg>{{ c.duration_minutes }}m</span>
+                        <span class="meta-item"><svg class="i"><use href="#i-calendar"/></svg>Starts {{ c.start_time|date:"M d, H:i" }}</span>
+                    </div>
+                    <div class="brief-foot">
+                        <span class="t-mono t-small t-muted">Pre-roll · queued</span>
+                        <a href="{% url 'contests:detail' slug=c.slug %}" class="btn btn-outline btn-sm">
+                            <span>Details</span>
+                            <svg class="i"><use href="#i-arrow-r"/></svg>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if not ongoing_contests and not upcoming_contests %}
+        <div class="empty">
+            <svg class="i icon"><use href="#i-arena"/></svg>
+            <h3>No contests in your queue</h3>
+            <p>When a recruiter invites you, your live and upcoming contests will appear here.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    {# ─ Submission log (secondary) ─ #}
+    <div style="grid-column: span 4;" class="rise rise-3">
+        <section class="module" style="position:sticky;top:80px;">
+            <div class="module-head">
+                <h3>Submission log</h3>
+                <span class="t-label">{{ recent_submissions|length }} recent</span>
+            </div>
+            <div class="module-body tight">
+                {% for s in recent_submissions %}
+                <div style="padding:14px 20px;border-bottom:1px solid var(--line-faint);">
+                    <div class="row-space" style="margin-bottom:6px;">
+                        <span class="t-mono t-small" style="color: var(--chalk-0); font-weight:600;">{{ s.question.title|truncatechars:24 }}</span>
+                        <span class="badge {% if s.verdict == 'accepted' %}badge-success{% elif s.verdict == 'wrong_answer' %}badge-danger{% else %}badge-warning{% endif %}">{{ s.get_verdict_display }}</span>
+                    </div>
+                    <div class="row-space">
+                        <span class="t-micro t-mono">{{ s.contest.title|truncatechars:28 }}</span>
+                        <span class="t-micro t-mono">{{ s.submitted_at|timesince }} ago</span>
+                    </div>
+                    <div class="t-mono t-micro" style="margin-top:4px;">→ <span class="t-signal">{{ s.score }}</span> / {{ s.max_score }} pts</div>
+                </div>
+                {% empty %}
+                <div style="padding:32px 20px;text-align:center;">
+                    <div class="t-mono t-micro">No submissions yet</div>
+                    <div class="t-small t-muted" style="margin-top:8px;">Enter a contest to start your log.</div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

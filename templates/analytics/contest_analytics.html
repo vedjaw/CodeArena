@@ -1,0 +1,99 @@
+{% extends "base/app.html" %}
+{% block title %}Analytics — {{ contest.title }}{% endblock %}
+{% block crumb_label %}Analytics · {{ contest.title|truncatechars:24 }}{% endblock %}
+
+{% block app_content %}
+<div class="page-head rise">
+    <div>
+        <div class="eyebrow">/ {{ contest.slug|upper }} · TELEMETRY</div>
+        <h1>Contest analytics.</h1>
+        <p class="sub">{{ contest.title }}</p>
+    </div>
+    <div class="row-tight">
+        <a href="{% url 'analytics:export_report' contest_slug=contest.slug format_type='csv' %}" class="btn btn-secondary">
+            <svg class="i"><use href="#i-download"/></svg>
+            <span>CSV</span>
+        </a>
+        <a href="{% url 'analytics:export_report' contest_slug=contest.slug format_type='xlsx' %}" class="btn btn-secondary">
+            <svg class="i"><use href="#i-download"/></svg>
+            <span>Excel</span>
+        </a>
+        <a href="{% url 'analytics:leaderboard' contest_slug=contest.slug %}" class="btn btn-primary">
+            <svg class="i"><use href="#i-trophy"/></svg>
+            <span>Leaderboard</span>
+        </a>
+    </div>
+</div>
+
+<div class="kpi-strip rise rise-1 mb-4">
+    <div class="kpi violet">
+        <div class="kpi-label">Participants</div>
+        <div class="kpi-value">{{ total_participants }}</div>
+        <div class="kpi-delta">→ unique candidates</div>
+    </div>
+    <div class="kpi accent">
+        <div class="kpi-label">Completed</div>
+        <div class="kpi-value">{{ completed }}</div>
+        <div class="kpi-delta">→ submitted sessions</div>
+    </div>
+    <div class="kpi cyan">
+        <div class="kpi-label">Avg. score</div>
+        <div class="kpi-value">{{ avg_score|floatformat:1 }}</div>
+        <div class="kpi-delta">→ across submissions</div>
+    </div>
+    <div class="kpi red">
+        <div class="kpi-label">Violations</div>
+        <div class="kpi-value">{{ total_violations }}</div>
+        <div class="kpi-delta">→ flagged events</div>
+    </div>
+</div>
+
+<div class="grid-12">
+    <div style="grid-column: span 7;" class="rise rise-2">
+        <section class="module">
+            <div class="module-head"><h3>Per-question performance</h3></div>
+            <div class="module-body tight">
+                <table class="dgrid">
+                    <thead>
+                        <tr><th>Question</th><th>Subs</th><th>Accepted</th><th>Rate</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for qs in question_stats %}
+                        <tr>
+                            <td class="cell-strong">{{ qs.question.title }}</td>
+                            <td class="cell-mono">{{ qs.total_submissions }}</td>
+                            <td class="cell-mono">{{ qs.accepted }}</td>
+                            <td>
+                                <span class="badge {% if qs.acceptance_rate > 60 %}badge-success{% elif qs.acceptance_rate > 30 %}badge-warning{% else %}badge-danger{% endif %}">{{ qs.acceptance_rate|floatformat:0 }}%</span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center t-muted" style="padding:24px;">No submission data yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <div style="grid-column: span 5;" class="rise rise-3">
+        <section class="module">
+            <div class="module-head">
+                <h3>Score distribution</h3>
+                <span class="t-label">{{ total_participants }} total</span>
+            </div>
+            <div class="module-body">
+                {% for d in score_distribution %}
+                <div style="display:grid;grid-template-columns:64px 1fr 48px;align-items:center;gap:12px;margin-bottom:12px;">
+                    <span class="t-mono t-small t-muted">{{ d.range }}</span>
+                    <div style="background:var(--ink-2);height:22px;position:relative;overflow:hidden;border:1px solid var(--line);">
+                        <div style="height:100%;width:{% widthratio d.count total_participants 100 %}%;background:linear-gradient(90deg, var(--signal) 0%, #6dff00 100%);min-width:{% if d.count > 0 %}3px{% else %}0{% endif %};box-shadow:inset 0 -8px 16px rgba(0,0,0,0.2);"></div>
+                    </div>
+                    <span class="t-mono t-small cell-strong text-right">{{ d.count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

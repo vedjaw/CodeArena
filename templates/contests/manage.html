@@ -1,0 +1,253 @@
+{% extends "base/app.html" %}
+{% block title %}Manage: {{ contest.title }} — CodeArena{% endblock %}
+{% block crumb_label %}Contest · Manage · {{ contest.title|truncatechars:24 }}{% endblock %}
+
+{% block app_content %}
+<div class="page-head">
+    <div>
+        <div class="eyebrow">/ {{ contest.slug|upper }} · MANAGE</div>
+        <h1>{{ contest.title }}</h1>
+        <p class="sub">
+            <span class="badge {% if contest.status == 'published' %}badge-success{% elif contest.status == 'draft' %}badge-warning{% else %}badge-secondary{% endif %}">{{ contest.get_status_display }}</span>
+            <span class="t-mono t-small t-muted" style="margin-left:12px;">{{ contest.start_time|date:"M d, Y H:i" }} → {{ contest.end_time|date:"M d, Y H:i" }}</span>
+        </p>
+    </div>
+    <div class="row-tight">
+        <a href="{% url 'contests:edit' slug=contest.slug %}" class="btn btn-secondary btn-sm">
+            <svg class="i"><use href="#i-edit"/></svg>
+            <span>Edit</span>
+        </a>
+        <a href="{% url 'contests:clone' slug=contest.slug %}" class="btn btn-secondary btn-sm">
+            <svg class="i"><use href="#i-copy"/></svg>
+            <span>Clone</span>
+        </a>
+        <a href="{% url 'analytics:leaderboard' contest_slug=contest.slug %}" class="btn btn-secondary btn-sm">
+            <svg class="i"><use href="#i-trophy"/></svg>
+            <span>Leaderboard</span>
+        </a>
+        <a href="{% url 'analytics:contest_analytics' contest_slug=contest.slug %}" class="btn btn-secondary btn-sm">
+            <svg class="i"><use href="#i-chart"/></svg>
+            <span>Analytics</span>
+        </a>
+        <a href="{% url 'analytics:export_report' contest_slug=contest.slug format_type='csv' %}" class="btn btn-secondary btn-sm">
+            <svg class="i"><use href="#i-download"/></svg>
+            <span>CSV</span>
+        </a>
+    </div>
+</div>
+
+<div class="row-tight mb-4">
+    <form method="post" action="{% url 'contests:publish' slug=contest.slug %}">
+        {% csrf_token %}
+        {% if contest.status == 'draft' %}
+        <input type="hidden" name="action" value="publish">
+        <button type="submit" class="btn btn-success">
+            <svg class="i"><use href="#i-send"/></svg>
+            <span>Publish</span>
+        </button>
+        {% else %}
+        <input type="hidden" name="action" value="unpublish">
+        <button type="submit" class="btn btn-warning">
+            <svg class="i"><use href="#i-refresh"/></svg>
+            <span>Unpublish</span>
+        </button>
+        {% endif %}
+    </form>
+    <form method="post" action="{% url 'contests:delete' slug=contest.slug %}" onsubmit="return confirm('Permanently delete this contest?')">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">
+            <svg class="i"><use href="#i-trash"/></svg>
+            <span>Delete</span>
+        </button>
+    </form>
+</div>
+
+<div class="kpi-strip mb-4">
+    <div class="kpi violet">
+        <div class="kpi-label">Questions</div>
+        <div class="kpi-value">{{ questions|length }}</div>
+        <div class="kpi-delta">→ in the bank</div>
+    </div>
+    <div class="kpi accent">
+        <div class="kpi-label">Participants</div>
+        <div class="kpi-value">{{ participant_count }}</div>
+        <div class="kpi-delta">→ registered</div>
+    </div>
+    <div class="kpi cyan">
+        <div class="kpi-label">Completed</div>
+        <div class="kpi-value">{{ completed_count }}</div>
+        <div class="kpi-delta">→ finished sessions</div>
+    </div>
+    <div class="kpi amber">
+        <div class="kpi-label">Duration</div>
+        <div class="kpi-value">{{ contest.duration_minutes }}<span style="font-size:1.2rem;">m</span></div>
+        <div class="kpi-delta">→ per session</div>
+    </div>
+</div>
+
+<section class="module mb-4">
+    <div class="module-head">
+        <h3>Question bank ({{ questions|length }})</h3>
+        <div class="row-tight">
+            <a href="{% url 'questions:create' contest_slug=contest.slug %}?type=coding" class="btn btn-primary btn-sm">
+                <svg class="i"><use href="#i-code"/></svg>
+                <span>Coding</span>
+            </a>
+            <a href="{% url 'questions:create' contest_slug=contest.slug %}?type=mcq_single" class="btn btn-secondary btn-sm">
+                <svg class="i"><use href="#i-plus"/></svg>
+                <span>MCQ</span>
+            </a>
+            <a href="{% url 'questions:create' contest_slug=contest.slug %}?type=subjective" class="btn btn-secondary btn-sm">
+                <svg class="i"><use href="#i-plus"/></svg>
+                <span>Subjective</span>
+            </a>
+        </div>
+    </div>
+    <div class="module-body tight">
+        <table class="dgrid">
+            <thead>
+                <tr><th style="width:60px;">#</th><th>Title</th><th>Type</th><th>Difficulty</th><th>Marks</th><th style="width:140px;">Actions</th></tr>
+            </thead>
+            <tbody>
+                {% for q in questions %}
+                <tr>
+                    <td class="cell-mono t-muted">{{ q.order|stringformat:"02d" }}</td>
+                    <td class="cell-strong"><a href="{% url 'questions:edit' pk=q.pk %}" style="border-bottom:1px solid var(--line-strong);">{{ q.title }}</a></td>
+                    <td><span class="badge badge-info">{{ q.get_question_type_display }}</span></td>
+                    <td>
+                        <span class="badge {% if q.difficulty == 'easy' %}badge-success{% elif q.difficulty == 'medium' %}badge-warning{% else %}badge-danger{% endif %}">{{ q.get_difficulty_display }}</span>
+                    </td>
+                    <td class="cell-mono">{{ q.marks }}</td>
+                    <td>
+                        <div class="row-tight">
+                            <a href="{% url 'questions:edit' pk=q.pk %}" class="btn btn-ghost btn-icon" title="Edit">
+                                <svg class="i"><use href="#i-edit"/></svg>
+                            </a>
+                            <form method="post" action="{% url 'questions:delete' pk=q.pk %}" style="display:inline;" onsubmit="return confirm('Delete this question?')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-ghost btn-icon" title="Delete">
+                                    <svg class="i"><use href="#i-trash"/></svg>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6"><div class="empty" style="margin:16px;"><svg class="i icon"><use href="#i-doc"/></svg><h3>No questions yet</h3><p>Add coding, MCQ, or subjective questions above.</p></div></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="grid-12">
+    <div style="grid-column: span 7;">
+        <section class="module">
+            <div class="module-head">
+                <h3>Participants</h3>
+                <span class="t-label">{{ sessions|length }} session{{ sessions|length|pluralize }}</span>
+            </div>
+            <div class="module-body tight">
+                <table class="dgrid">
+                    <thead>
+                        <tr><th>Candidate</th><th>Status</th><th>Score</th><th>Violations</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for s in sessions %}
+                        <tr>
+                            <td>
+                                <div class="cell-strong">{{ s.user.get_full_name|default:"—" }}</div>
+                                <div class="cell-mono t-micro t-muted">{{ s.user.email }}</div>
+                            </td>
+                            <td>
+                                <span class="badge {% if s.status == 'completed' %}badge-success{% elif s.status == 'in_progress' %}badge-info{% elif s.status == 'auto_submitted' %}badge-warning{% else %}badge-secondary{% endif %}">{{ s.get_status_display }}</span>
+                            </td>
+                            <td class="cell-mono cell-strong">{{ s.total_score }}</td>
+                            <td>
+                                {% if s.violation_count > 0 %}
+                                <span class="badge badge-danger">{{ s.violation_count }}</span>
+                                {% else %}
+                                <span class="t-mono t-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form method="post" action="{% url 'contests:reset_session' slug=contest.slug session_id=s.id %}" onsubmit="return confirm('Reset progress for this candidate?')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-ghost btn-sm" title="Reset session">
+                                        <svg class="i"><use href="#i-refresh"/></svg>
+                                        <span>Reset</span>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-center t-muted" style="padding:24px;">No participants yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <div style="grid-column: span 5;" class="stack-4">
+        <section class="module">
+            <div class="module-head"><h3>Whitelist (invitations)</h3></div>
+            <div class="module-body">
+                <form method="post" action="{% url 'contests:invite' slug=contest.slug %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label>Emails (comma-separated)</label>
+                        {{ invitation_form.emails }}
+                    </div>
+                    <div class="form-group">
+                        <label>or upload CSV / TXT</label>
+                        {{ invitation_form.emails_file }}
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <svg class="i"><use href="#i-plus"/></svg>
+                        <span>Add emails</span>
+                    </button>
+                </form>
+
+                {% if invitations %}
+                <div class="mt-3" style="border-top: 1px solid var(--line-faint); padding-top: 16px;">
+                    <span class="t-label">Currently invited · {{ invitations|length }}</span>
+                    <ul style="margin-top: 10px; display: flex; flex-direction: column; gap: 4px;">
+                        {% for invite in invitations %}
+                        <li style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--ink-2);border:1px solid var(--line-faint);">
+                            <span class="t-mono t-small">{{ invite.email }}</span>
+                            <form method="post" action="{% url 'contests:remove_invitation' slug=contest.slug invite_id=invite.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-ghost btn-icon btn-sm" title="Remove">
+                                    <svg class="i"><use href="#i-x"/></svg>
+                                </button>
+                            </form>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="module">
+            <div class="module-head"><h3>Post announcement</h3></div>
+            <div class="module-body">
+                <form method="post" action="{% url 'contests:announce' slug=contest.slug %}">
+                    {% csrf_token %}
+                    <div class="form-group"><label>Title</label>{{ announcement_form.title }}</div>
+                    <div class="form-group"><label>Message</label>{{ announcement_form.message }}</div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="is_urgent" id="urg">
+                        <label for="urg">Mark as urgent</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <svg class="i"><use href="#i-flag"/></svg>
+                        <span>Broadcast</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

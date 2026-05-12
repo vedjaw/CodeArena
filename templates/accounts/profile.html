@@ -1,0 +1,91 @@
+{% extends "base/app.html" %}
+{% block title %}Profile — CodeArena{% endblock %}
+{% block crumb_label %}Profile{% endblock %}
+
+{% block app_content %}
+<div class="page-head">
+    <div>
+        <div class="eyebrow">/ OPERATOR</div>
+        <h1>Profile.</h1>
+        <p class="sub t-mono">Identity, preferences, and recent activity.</p>
+    </div>
+    <a href="{% url 'accounts:change_password' %}" class="btn btn-secondary">
+        <svg class="i"><use href="#i-lock"/></svg>
+        <span>Change password</span>
+    </a>
+</div>
+
+<div class="grid-12">
+    <div style="grid-column: span 8;" class="rise rise-1">
+        <section class="module">
+            <div class="module-head"><h3>Edit profile</h3></div>
+            <div class="module-body">
+                <form method="post" enctype="multipart/form-data" class="stack-3">
+                    {% csrf_token %}
+                    <div class="grid-2">
+                        <div class="form-group" style="margin:0;"><label>First name</label>{{ form.first_name }}</div>
+                        <div class="form-group" style="margin:0;"><label>Last name</label>{{ form.last_name }}</div>
+                    </div>
+                    <div class="form-group" style="margin:0;"><label>Phone</label>{{ form.phone }}</div>
+                    <div class="form-group" style="margin:0;"><label>Organization</label>{{ form.organization }}</div>
+                    <div class="form-group" style="margin:0;"><label>Bio</label>{{ form.bio }}</div>
+                    <div class="grid-2">
+                        <div class="form-group" style="margin:0;"><label>Avatar</label>{{ form.avatar }}</div>
+                        <div class="form-group" style="margin:0;"><label>Resume</label>{{ form.resume }}</div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group" style="margin:0;"><label>LinkedIn URL</label>{{ form.linkedin_url }}</div>
+                        <div class="form-group" style="margin:0;"><label>GitHub URL</label>{{ form.github_url }}</div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group" style="margin:0;"><label>Preferred language</label>{{ form.preferred_language }}</div>
+                        <div class="form-group" style="margin:0;"><label>Editor theme</label>{{ form.preferred_theme }}</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <svg class="i"><use href="#i-check"/></svg>
+                        <span>Save changes</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+    </div>
+
+    <div style="grid-column: span 4;" class="stack-4 rise rise-2">
+        <section class="module">
+            <div class="module-head"><h3>Account</h3></div>
+            <div class="module-body">
+                <div style="display:flex;align-items:center;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--line-faint);margin-bottom:16px;">
+                    <div class="user-avatar" style="width:48px;height:48px;font-size:1rem;">{{ user.first_name.0|default:'·' }}{{ user.last_name.0|default:'' }}</div>
+                    <div style="min-width:0;">
+                        <div class="cell-strong" style="font-size:0.96rem;">{{ user.get_full_name|default:user.email }}</div>
+                        <div class="t-mono t-small t-muted" style="overflow:hidden;text-overflow:ellipsis;">{{ user.email }}</div>
+                    </div>
+                </div>
+                <dl style="display:flex;flex-direction:column;gap:10px;">
+                    <div class="row-space"><dt class="t-label">Role</dt><dd><span class="badge badge-purple">{{ user.get_role_display }}</span></dd></div>
+                    <div class="row-space"><dt class="t-label">Joined</dt><dd class="t-mono t-small">{{ user.date_joined|date:"M d, Y" }}</dd></div>
+                    <div class="row-space"><dt class="t-label">Last login</dt><dd class="t-mono t-small">{{ user.last_login|date:"M d, H:i"|default:"—" }}</dd></div>
+                </dl>
+            </div>
+        </section>
+
+        <section class="module">
+            <div class="module-head"><h3>Activity log</h3></div>
+            <div class="module-body tight">
+                {% for a in activities %}
+                <div style="padding:12px 20px;border-bottom:1px solid var(--line-faint);">
+                    <div class="row-space">
+                        <span class="badge badge-info">{{ a.get_activity_type_display }}</span>
+                        <span class="t-mono t-micro t-muted">{{ a.created_at|timesince }} ago</span>
+                    </div>
+                </div>
+                {% empty %}
+                <div style="padding:24px 20px;text-align:center;">
+                    <div class="t-mono t-micro t-muted">No recent activity</div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

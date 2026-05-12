@@ -1,0 +1,91 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="app">
+    {# ── Left rail (compact icon nav) ─────────────────────────────── #}
+    <aside class="rail">
+        <a href="{% url 'landing' %}" class="rail-brand" aria-label="CodeArena">
+            <span class="rail-mark"><svg class="i i-lg"><use href="#i-mark"/></svg></span>
+        </a>
+        <nav class="rail-nav">
+            {% if is_admin %}
+            <span class="rail-section">SYS</span>
+            <a href="{% url 'dashboard:admin' %}" class="rail-item {% if request.path == '/dashboard/admin/' %}active{% endif %}" data-tip="Overview">
+                <svg class="i"><use href="#i-overview"/></svg>
+            </a>
+            <a href="{% url 'dashboard:admin_users' %}" class="rail-item {% if 'users' in request.path %}active{% endif %}" data-tip="Users">
+                <svg class="i"><use href="#i-users"/></svg>
+            </a>
+            {% endif %}
+
+            {% if is_recruiter %}
+            <span class="rail-section">REC</span>
+            <a href="{% url 'dashboard:recruiter' %}" class="rail-item {% if request.path == '/dashboard/recruiter/' %}active{% endif %}" data-tip="Overview">
+                <svg class="i"><use href="#i-overview"/></svg>
+            </a>
+            <a href="{% url 'contests:create' %}" class="rail-item {% if 'create' in request.path %}active{% endif %}" data-tip="New contest">
+                <svg class="i"><use href="#i-plus"/></svg>
+            </a>
+            {% endif %}
+
+            {% if is_candidate %}
+            <span class="rail-section">DEV</span>
+            <a href="{% url 'dashboard:candidate' %}" class="rail-item {% if request.path == '/dashboard/candidate/' %}active{% endif %}" data-tip="Overview">
+                <svg class="i"><use href="#i-overview"/></svg>
+            </a>
+            {% endif %}
+
+            <span class="rail-section">NAV</span>
+            <a href="{% url 'contests:list' %}" class="rail-item {% if request.path == '/contests/' %}active{% endif %}" data-tip="Contests">
+                <svg class="i"><use href="#i-arena"/></svg>
+            </a>
+            <a href="{% url 'accounts:profile' %}" class="rail-item {% if 'profile' in request.path %}active{% endif %}" data-tip="Profile">
+                <svg class="i"><use href="#i-user"/></svg>
+            </a>
+            <div style="flex:1"></div>
+            <a href="{% url 'accounts:logout' %}" class="rail-item" data-tip="Sign out">
+                <svg class="i"><use href="#i-exit"/></svg>
+            </a>
+        </nav>
+    </aside>
+
+    {# ── Main pane ────────────────────────────────────────────────── #}
+    <div class="pane">
+        <header class="app-header">
+            {% block crumbs %}
+            <nav class="crumbs">
+                <a href="{% url 'landing' %}">CodeArena</a>
+                <span class="sep">/</span>
+                <span class="here">{% block crumb_label %}Workspace{% endblock %}</span>
+            </nav>
+            {% endblock %}
+
+            <span class="app-header-spacer"></span>
+
+            {% block header_meta %}
+            <div class="app-header-meta">
+                <span class="dot"></span>
+                <span class="t-mono">SYSTEM · ONLINE</span>
+            </div>
+            {% endblock %}
+
+            <button class="theme-toggle" onclick="caToggleTheme()" title="Toggle light/dark theme" aria-label="Toggle theme">
+                <svg class="i t-icon-sun"><use href="#i-sun"/></svg>
+                <svg class="i t-icon-moon"><use href="#i-moon"/></svg>
+            </button>
+
+            {% if user.is_authenticated %}
+            <a href="{% url 'accounts:profile' %}" class="user-chip" title="{{ user.email }}">
+                <span class="who">{{ user.first_name|default:user.email }}</span>
+                <span class="user-avatar">{{ user.first_name.0|default:'·' }}{{ user.last_name.0|default:'' }}</span>
+            </a>
+            {% endif %}
+        </header>
+
+        <main class="workspace">
+            {% block app_content %}{% endblock %}
+        </main>
+    </div>
+</div>
+{% endblock %}

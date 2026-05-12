@@ -1,0 +1,78 @@
+{% extends "base/base.html" %}
+{% block title %}Create account — CodeArena{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+    <aside class="auth-aside">
+        <a href="{% url 'landing' %}" class="auth-mark">
+            <svg class="i i-lg"><use href="#i-mark"/></svg>
+            <span>CodeArena</span>
+        </a>
+
+        <div>
+            <span class="t-label" style="color: var(--signal); margin-bottom: 16px; display:block;">/ ONBOARD</span>
+            <h2>Provision a new<br><span class="accent">workspace.</span></h2>
+            <p class="pitch">No credit card. No upgrade prompts. Spin up a contest, invite your candidates, and start measuring depth — within minutes.</p>
+
+            <div class="pillars">
+                <div class="pillar">
+                    <span class="num">001</span>
+                    <svg class="i"><use href="#i-code"/></svg>
+                    <span class="lbl">Multi-language IDE</span>
+                </div>
+                <div class="pillar">
+                    <span class="num">002</span>
+                    <svg class="i"><use href="#i-target"/></svg>
+                    <span class="lbl">Custom test cases</span>
+                </div>
+                <div class="pillar">
+                    <span class="num">003</span>
+                    <svg class="i"><use href="#i-chart"/></svg>
+                    <span class="lbl">Detailed analytics</span>
+                </div>
+                <div class="pillar">
+                    <span class="num">004</span>
+                    <svg class="i"><use href="#i-download"/></svg>
+                    <span class="lbl">Exportable reports</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="foot">v3 · operator system online</div>
+    </aside>
+
+    <section class="auth-main">
+        <button class="theme-toggle" onclick="caToggleTheme()" title="Toggle theme" aria-label="Toggle theme" style="position:absolute;top:20px;right:20px;">
+            <svg class="i t-icon-sun"><use href="#i-sun"/></svg>
+            <svg class="i t-icon-moon"><use href="#i-moon"/></svg>
+        </button>
+        <div class="auth-card">
+            <div class="step">/ STEP 01 · PROVISION</div>
+            <h1>Create your account.</h1>
+            <p class="lead">Pick a role. Set credentials. Start running contests.</p>
+
+            <form method="POST">
+                {% csrf_token %}
+                {% for field in form %}
+                <div class="form-group">
+                    <label>{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                    <div class="form-error">{{ field.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                <button type="submit" class="btn btn-primary btn-lg w-full">
+                    <span>Create account</span>
+                    <svg class="i"><use href="#i-arrow-r"/></svg>
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <span>Already have one? <a href="{% url 'accounts:login' %}">Sign in</a></span>
+                <a href="{% url 'landing' %}">← Back</a>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

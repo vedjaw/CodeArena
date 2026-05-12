@@ -1,0 +1,206 @@
+{% extends "base/app.html" %}
+{% load custom_tags %}
+{% block title %}New question — CodeArena{% endblock %}
+{% block crumb_label %}{{ contest.title|truncatechars:24 }} · New question{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+<style>
+.ts-control { background: var(--ink-2) !important; border: 1px solid var(--line) !important; min-height: 40px !important; border-radius: var(--r-1) !important; }
+.ts-control input { color: var(--chalk-0) !important; font-family: var(--font-mono) !important; }
+.ts-dropdown { background: var(--ink-1) !important; border: 1px solid var(--line-strong) !important; color: var(--chalk-1) !important; }
+.ts-dropdown .option { padding: 10px 14px !important; font-family: var(--font-mono) !important; font-size: 0.82rem !important; }
+.ts-dropdown .option.active { background: var(--signal-faint) !important; color: var(--signal) !important; }
+.ts-control .item { background: var(--ink-3) !important; color: var(--chalk-0) !important; font-family: var(--font-mono) !important; font-size: 0.78rem !important; padding: 2px 8px !important; border-radius: var(--r-1) !important; border: 1px solid var(--line-strong) !important; }
+</style>
+{% endblock %}
+
+{% block app_content %}
+<div class="page-head">
+    <div>
+        <div class="eyebrow">/ {{ contest.slug|upper }} · NEW QUESTION</div>
+        <h1>Add a question.</h1>
+        <p class="sub t-mono">Coding · MCQ · Subjective. Pick one.</p>
+    </div>
+    <a href="{% url 'contests:manage' slug=contest.slug %}" class="btn btn-secondary">
+        <svg class="i"><use href="#i-arrow-l"/></svg>
+        <span>Back to contest</span>
+    </a>
+</div>
+
+{% if form.errors or coding_form.errors or mcq_form.errors or subjective_form.errors %}
+<div class="alert alert-error mb-3">
+    <svg class="i"><use href="#i-alert"/></svg>
+    <div>
+        <strong>Please fix the following:</strong>
+        <ul style="list-style: none; margin-top: 8px; font-size: 0.82rem;">
+            {% for field in form %}{% for error in field.errors %}<li>· {{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+            {% for field in coding_form %}{% for error in field.errors %}<li>· {{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+            {% for field in mcq_form %}{% for error in field.errors %}<li>· {{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+            {% for field in subjective_form %}{% for error in field.errors %}<li>· {{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}
+
+<form method="post" class="stack-4">
+    {% csrf_token %}
+
+    <section class="module">
+        <span class="tag-id">/ 01 — META</span>
+        <div class="module-head"><h3>Question metadata</h3></div>
+        <div class="module-body">
+            <div class="grid-2">
+                <div class="form-group"><label>Title</label>{{ form.title }}</div>
+                <div class="form-group"><label>Type</label>{{ form.question_type }}</div>
+            </div>
+            <div class="grid-3">
+                <div class="form-group"><label>Difficulty</label>{{ form.difficulty }}</div>
+                <div class="form-group"><label>Marks</label>{{ form.marks }}</div>
+                <div class="form-group"><label>Negative marks</label>{{ form.negative_marks }}</div>
+            </div>
+        </div>
+    </section>
+
+    {# CODING #}
+    <section class="module" id="coding-fields">
+        <span class="tag-id">/ 02 — CODING</span>
+        <div class="module-head"><h3>Coding details</h3></div>
+        <div class="module-body">
+            <div class="form-group"><label>Problem statement</label>{{ coding_form.problem_statement }}</div>
+            <div class="grid-2">
+                <div class="form-group"><label>Input format</label>{{ coding_form.input_format }}</div>
+                <div class="form-group"><label>Output format</label>{{ coding_form.output_format }}</div>
+            </div>
+            <div class="form-group"><label>Constraints</label>{{ coding_form.constraints }}</div>
+            <div class="grid-2">
+                <div class="form-group"><label>Sample input</label>{{ coding_form.sample_input }}</div>
+                <div class="form-group"><label>Sample output</label>{{ coding_form.sample_output }}</div>
+            </div>
+            <div class="form-group"><label>Explanation</label>{{ coding_form.explanation }}</div>
+            <div class="grid-2">
+                <div class="form-group"><label>Time limit (s)</label>{{ coding_form.time_limit_seconds }}</div>
+                <div class="form-group"><label>Memory limit (MB)</label>{{ coding_form.memory_limit_mb }}</div>
+            </div>
+
+            <div class="form-group coding-fields">
+                <label>Allowed languages</label>
+                {% if has_previous_coding %}
+                <div class="form-check mb-2">
+                    <input type="checkbox" name="copy_previous_languages" id="copy_previous_languages">
+                    <label for="copy_previous_languages">Inherit languages from previous question</label>
+                </div>
+                {% endif %}
+                {{ coding_form.allowed_languages }}
+                <div class="helptext">Type to search. Multiple selection.</div>
+            </div>
+
+            <div class="coding-fields mt-4">
+                <h4 class="t-label" style="margin-bottom:12px;">/ CODE TEMPLATES</h4>
+                <p class="t-small t-muted mb-3">Starter (visible to candidates) and driver (hidden boilerplate) per language.</p>
+
+                {% for lang_code, lang_name in coding_form.fields.allowed_languages.choices %}
+                <div class="lang-template-block" data-lang="{{ lang_code }}" style="margin-bottom: 16px; padding: 16px; background: var(--ink-2); border: 1px solid var(--line); border-left: 3px solid var(--signal);">
+                    <div class="t-label" style="margin-bottom:12px;">{{ lang_name }}</div>
+                    <div class="grid-2">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Starter code</label>
+                            {% with field_name=lang_code|add:'_starter_code' %}{{ coding_form|get_field:field_name }}{% endwith %}
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Driver code</label>
+                            {% with field_name=lang_code|add:'_driver_code' %}{{ coding_form|get_field:field_name }}{% endwith %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    {# MCQ #}
+    <section class="module hidden" id="mcq-fields">
+        <span class="tag-id">/ 02 — MCQ</span>
+        <div class="module-head"><h3>MCQ details</h3></div>
+        <div class="module-body">
+            <div class="form-group"><label>Question text</label>{{ mcq_form.question_text }}</div>
+            <div class="form-group"><label>Explanation</label>{{ mcq_form.explanation }}</div>
+            <h4 class="t-label mt-3 mb-2">/ OPTIONS</h4>
+            <div id="mcq-options" class="stack-2">
+                {% for letter in "ABCD" %}
+                <div class="row" style="gap:12px;align-items:center;">
+                    <span class="kbd">{{ letter }}</span>
+                    <input type="text" name="option_text_{{ forloop.counter0 }}" placeholder="Option {{ letter }}" style="flex:1;">
+                    <label class="form-check"><input type="checkbox" name="option_correct_{{ forloop.counter0 }}"> <label>Correct</label></label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    {# SUBJECTIVE #}
+    <section class="module hidden" id="subjective-fields">
+        <span class="tag-id">/ 02 — SUBJECTIVE</span>
+        <div class="module-head"><h3>Subjective details</h3></div>
+        <div class="module-body">
+            <div class="form-group"><label>Question text</label>{{ subjective_form.question_text }}</div>
+            <div class="form-group"><label>Guidelines</label>{{ subjective_form.guidelines }}</div>
+            <div class="form-group"><label>Max words</label>{{ subjective_form.max_word_count }}</div>
+            <div class="form-group"><label>Reference answer</label>{{ subjective_form.reference_answer }}</div>
+        </div>
+    </section>
+
+    <div class="row-tight">
+        <button type="submit" class="btn btn-primary btn-lg">
+            <svg class="i"><use href="#i-check"/></svg>
+            <span>Create question</span>
+        </button>
+        <a href="{% url 'contests:manage' slug=contest.slug %}" class="btn btn-secondary btn-lg">Cancel</a>
+    </div>
+</form>
+
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script>
+document.getElementById('question-type-select')?.addEventListener('change', function() {
+    const type = this.value;
+    const sections = {
+        coding: document.getElementById('coding-fields'),
+        mcq: document.getElementById('mcq-fields'),
+        subjective: document.getElementById('subjective-fields')
+    };
+    sections.coding.classList.toggle('hidden', type !== 'coding');
+    sections.mcq.classList.toggle('hidden', !type.startsWith('mcq'));
+    sections.subjective.classList.toggle('hidden', type !== 'subjective');
+    Object.values(sections).forEach(section => {
+        if (!section) return;
+        const isHidden = section.classList.contains('hidden');
+        section.querySelectorAll('input, select, textarea').forEach(el => { el.disabled = isHidden; });
+    });
+});
+document.getElementById('question-type-select')?.dispatchEvent(new Event('change'));
+
+if (typeof TomSelect !== 'undefined') {
+    const langSelect = new TomSelect('#allowed-languages-select', {
+        plugins: ['remove_button'],
+        create: false,
+        placeholder: 'Search and select languages…'
+    });
+    function toggleLangBlocks() {
+        const selected = langSelect.getValue();
+        document.querySelectorAll('.lang-template-block').forEach(block => {
+            block.style.display = selected.includes(block.dataset.lang) ? 'block' : 'none';
+        });
+    }
+    langSelect.on('change', toggleLangBlocks);
+    toggleLangBlocks();
+
+    const copyPrevCheckbox = document.getElementById('copy_previous_languages');
+    const previousLanguages = {{ previous_languages_json|safe|default:"[]" }};
+    if (copyPrevCheckbox) {
+        copyPrevCheckbox.addEventListener('change', (e) => {
+            if (e.target.checked) langSelect.setValue(previousLanguages);
+        });
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,163 @@
+{% extends "base/app.html" %}
+{% block title %}{{ contest.title }} — CodeArena{% endblock %}
+{% block crumb_label %}Contest · {{ contest.title|truncatechars:32 }}{% endblock %}
+
+{% block app_content %}
+<div class="page-head rise">
+    <div>
+        <div class="eyebrow">/ {{ contest.slug|upper }}</div>
+        <h1>{{ contest.title }}</h1>
+        <p class="sub t-mono">
+            {% if contest.is_active %}
+                <span class="t-signal">● LIVE</span> · runs until {{ contest.end_time|date:"M d, H:i" }}
+            {% elif contest.is_upcoming %}
+                <span style="color:var(--cyan);">● UPCOMING</span> · starts {{ contest.start_time|date:"M d, H:i" }}
+            {% else %}
+                <span style="color:var(--chalk-3);">● ENDED</span> · {{ contest.end_time|date:"M d, Y" }}
+            {% endif %}
+        </p>
+    </div>
+    {% if is_creator %}
+    <a href="{% url 'contests:manage' slug=contest.slug %}" class="btn btn-secondary">
+        <svg class="i"><use href="#i-settings"/></svg>
+        <span>Manage</span>
+    </a>
+    {% endif %}
+</div>
+
+<div class="grid-12">
+    {# ─ Primary: description + instructions ─ #}
+    <div style="grid-column: span 8;" class="stack-4 rise rise-1">
+        <section class="module">
+            <div class="module-head"><h3>Briefing</h3></div>
+            <div class="module-body t-body">
+                {{ contest.description|linebreaks }}
+            </div>
+        </section>
+
+        {% if contest.instructions %}
+        <section class="module">
+            <div class="module-head"><h3>Instructions</h3></div>
+            <div class="module-body" style="background: var(--ink-2); font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.7; color: var(--chalk-1);">
+                {{ contest.instructions|linebreaks }}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if announcements %}
+        <section class="module">
+            <div class="module-head"><h3>Announcements</h3></div>
+            <div class="module-body" style="display:flex;flex-direction:column;gap:8px;">
+                {% for a in announcements %}
+                <div class="alert {% if a.is_urgent %}alert-warning{% else %}alert-info{% endif %}">
+                    <svg class="i"><use href="#i-flag"/></svg>
+                    <div>
+                        <strong>{{ a.title }}</strong> — {{ a.message }}
+                        <div class="t-mono t-micro" style="margin-top:4px;opacity:0.7;">{{ a.created_at|timesince }} ago</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+    </div>
+
+    {# ─ Secondary: spec card + CTA ─ #}
+    <div style="grid-column: span 4;" class="stack-4 rise rise-2">
+        <section class="module">
+            <div class="module-head"><h3>Specification</h3></div>
+            <div class="module-body" style="padding:0;">
+                <dl style="display:flex;flex-direction:column;">
+                    <div style="display:grid;grid-template-columns:120px 1fr;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line-faint);">
+                        <dt class="t-label">Start</dt>
+                        <dd class="t-mono t-small">{{ contest.start_time|date:"M d, Y H:i" }}</dd>
+                    </div>
+                    <div style="display:grid;grid-template-columns:120px 1fr;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line-faint);">
+                        <dt class="t-label">End</dt>
+                        <dd class="t-mono t-small">{{ contest.end_time|date:"M d, Y H:i" }}</dd>
+                    </div>
+                    <div style="display:grid;grid-template-columns:120px 1fr;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line-faint);">
+                        <dt class="t-label">Duration</dt>
+                        <dd class="t-mono t-small t-signal">{{ contest.duration_minutes }} min</dd>
+                    </div>
+                    <div style="display:grid;grid-template-columns:120px 1fr;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line-faint);">
+                        <dt class="t-label">Questions</dt>
+                        <dd class="t-mono t-small">{{ question_count }}</dd>
+                    </div>
+                    <div style="display:grid;grid-template-columns:120px 1fr;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line-faint);">
+                        <dt class="t-label">Total marks</dt>
+                        <dd class="t-mono t-small">{{ contest.total_marks }}</dd>
+                    </div>
+                    <div style="display:grid;grid-template-columns:120px 1fr;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line-faint);">
+                        <dt class="t-label">Proctoring</dt>
+                        <dd>
+                            {% if contest.enable_proctoring %}
+                                <span class="badge badge-warning">Enabled</span>
+                            {% else %}
+                                <span class="badge badge-secondary">Disabled</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                    {% if contest.enable_proctoring %}
+                    <div style="display:grid;grid-template-columns:120px 1fr;gap:12px;padding:12px 20px;">
+                        <dt class="t-label">Max violations</dt>
+                        <dd class="t-mono t-small">{{ contest.max_violations }}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+        </section>
+
+        <section class="module">
+            <div class="module-body">
+                {% if session and session.status in 'completed,auto_submitted' %}
+                    <div class="text-center stack-3">
+                        <div class="t-label" style="color: var(--signal);">/ COMPLETED</div>
+                        <div class="t-mono" style="font-size:2.4rem;font-weight:700;color:var(--chalk-0);">{{ session.total_score }}<span style="color:var(--chalk-3);">/{{ contest.total_marks }}</span></div>
+                        <div class="t-mono t-small t-muted">Final score</div>
+                        {% if contest.leaderboard_visible %}
+                        <a href="{% url 'analytics:leaderboard' contest_slug=contest.slug %}" class="btn btn-outline w-full">
+                            <svg class="i"><use href="#i-trophy"/></svg>
+                            <span>View leaderboard</span>
+                        </a>
+                        {% endif %}
+                    </div>
+                {% elif contest.is_active %}
+                    {% if request.user.is_candidate %}
+                        {% if session and session.status == 'in_progress' %}
+                        <a href="{% url 'contests:take' slug=contest.slug %}" class="btn btn-primary btn-lg w-full">
+                            <svg class="i"><use href="#i-play"/></svg>
+                            <span>Resume session</span>
+                        </a>
+                        <div class="t-mono t-micro t-muted text-center mt-2">→ in-progress · auto-saved</div>
+                        {% else %}
+                            {% if contest.visibility == 'password' %}
+                            <a href="{% url 'contests:access' slug=contest.slug %}" class="btn btn-primary btn-lg w-full">
+                                <svg class="i"><use href="#i-lock"/></svg>
+                                <span>Enter password</span>
+                            </a>
+                            {% else %}
+                            <a href="{% url 'contests:system_check' slug=contest.slug %}" class="btn btn-primary btn-lg w-full">
+                                <svg class="i"><use href="#i-play"/></svg>
+                                <span>Begin contest</span>
+                            </a>
+                            {% endif %}
+                            <div class="t-mono t-micro t-muted text-center mt-2">→ pre-flight check required</div>
+                        {% endif %}
+                    {% else %}
+                        <div class="t-small t-muted text-center" style="padding:12px 0;">Recruiters and admins observe — they do not participate.</div>
+                    {% endif %}
+                {% elif contest.is_upcoming %}
+                    <div class="text-center stack-3">
+                        <div class="t-label">/ STARTS IN</div>
+                        <div class="t-mono t-signal" style="font-size:1.4rem;font-weight:700;">{{ contest.start_time|date:"M d, H:i" }}</div>
+                        <div class="t-mono t-small t-muted">Session locked until start time.</div>
+                    </div>
+                {% else %}
+                    <div class="text-center t-small t-muted" style="padding:12px 0;">This contest has ended.</div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

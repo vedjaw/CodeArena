@@ -1,0 +1,103 @@
+{% extends "base/app.html" %}
+{% block title %}System Operator — CodeArena{% endblock %}
+{% block crumb_label %}Admin · System overview{% endblock %}
+
+{% block app_content %}
+<div class="page-head rise">
+    <div>
+        <div class="eyebrow">/ SYS · OVERVIEW</div>
+        <h1>System control surface.</h1>
+        <p class="sub t-mono">Operator-level visibility across users, contests, and live sessions.</p>
+    </div>
+    <div class="row-tight">
+        <a href="{% url 'dashboard:admin_users' %}" class="btn btn-secondary">
+            <svg class="i"><use href="#i-users"/></svg>
+            <span>Manage users</span>
+        </a>
+        <a href="{% url 'contests:list' %}" class="btn btn-primary">
+            <svg class="i"><use href="#i-arena"/></svg>
+            <span>All contests</span>
+        </a>
+    </div>
+</div>
+
+<div class="kpi-strip rise rise-1 mb-4">
+    <div class="kpi violet">
+        <div class="kpi-label">Total users</div>
+        <div class="kpi-value">{{ total_users }}</div>
+        <div class="kpi-delta">→ across all roles</div>
+    </div>
+    <div class="kpi accent">
+        <div class="kpi-label">Candidates</div>
+        <div class="kpi-value">{{ total_candidates }}</div>
+        <div class="kpi-delta">→ provisioned</div>
+    </div>
+    <div class="kpi cyan">
+        <div class="kpi-label">Contests</div>
+        <div class="kpi-value">{{ total_contests }}</div>
+        <div class="kpi-delta">→ total</div>
+    </div>
+    <div class="kpi amber">
+        <div class="kpi-label">Active now</div>
+        <div class="kpi-value">{{ active_contests }}</div>
+        <div class="kpi-delta">→ live sessions</div>
+    </div>
+</div>
+
+<div class="grid-12">
+    <div style="grid-column: span 7;" class="rise rise-2">
+        <section class="module">
+            <div class="module-head">
+                <h3>Recently provisioned users</h3>
+                <a href="{% url 'dashboard:admin_users' %}" class="btn btn-ghost btn-sm">
+                    <span>Manage</span>
+                    <svg class="i"><use href="#i-arrow-r"/></svg>
+                </a>
+            </div>
+            <div class="module-body tight">
+                <table class="dgrid">
+                    <thead>
+                        <tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for u in recent_users %}
+                        <tr>
+                            <td class="cell-strong">{{ u.get_full_name|default:"—" }}</td>
+                            <td class="cell-mono t-small t-muted">{{ u.email }}</td>
+                            <td><span class="badge badge-purple">{{ u.get_role_display }}</span></td>
+                            <td class="cell-mono t-small t-muted">{{ u.date_joined|date:"M d" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center t-muted" style="padding:32px;">No users provisioned yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <div style="grid-column: span 5;" class="rise rise-3">
+        <section class="module">
+            <div class="module-head">
+                <h3>Activity log</h3>
+                <span class="badge badge-live">LIVE</span>
+            </div>
+            <div class="module-body tight">
+                {% for a in recent_activities %}
+                <div style="padding:12px 20px;border-bottom:1px solid var(--line-faint);">
+                    <div class="row-space">
+                        <span class="t-small" style="color:var(--chalk-0);"><strong>{{ a.user.get_full_name|default:a.user.email }}</strong></span>
+                        <span class="t-mono t-micro">{{ a.created_at|timesince }} ago</span>
+                    </div>
+                    <div class="t-mono t-micro" style="margin-top:4px;color:var(--chalk-2);">→ {{ a.get_activity_type_display }}</div>
+                </div>
+                {% empty %}
+                <div style="padding:32px 20px;text-align:center;">
+                    <div class="t-mono t-micro">Activity log is quiet</div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

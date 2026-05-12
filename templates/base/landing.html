@@ -1,0 +1,329 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}CodeArena — Engineering-grade coding assessment{% endblock %}
+
+{% block content %}
+{# ─── Top navigation ────────────────────────────────────────────── #}
+<header class="land-nav">
+    <a href="/" class="land-brand">
+        <svg class="i i-lg"><use href="#i-mark"/></svg>
+        <span>CodeArena</span>
+        <span class="t-micro" style="color:var(--chalk-4);margin-left:8px;">v3</span>
+    </a>
+    <nav class="land-nav-links">
+        <a href="#features">Engine</a>
+        <a href="#flow">Flow</a>
+        <a href="{% url 'contests:list' %}">Contests</a>
+        <button class="theme-toggle" onclick="caToggleTheme()" title="Toggle light/dark theme" aria-label="Toggle theme" style="margin-left:4px;">
+            <svg class="i t-icon-sun"><use href="#i-sun"/></svg>
+            <svg class="i t-icon-moon"><use href="#i-moon"/></svg>
+        </button>
+        {% if user.is_authenticated %}
+        <a href="{% url 'dashboard:home' %}" class="btn btn-secondary btn-sm" style="margin-left:4px;">
+            <span>Dashboard</span>
+            <svg class="i"><use href="#i-arrow-r"/></svg>
+        </a>
+        {% else %}
+        <a href="{% url 'accounts:login' %}" class="btn btn-ghost btn-sm">Sign in</a>
+        <a href="{% url 'accounts:register' %}" class="btn btn-primary btn-sm">
+            <span>Create account</span>
+            <svg class="i"><use href="#i-arrow-r"/></svg>
+        </a>
+        {% endif %}
+    </nav>
+</header>
+
+{# ─── HERO ──────────────────────────────────────────────────────── #}
+<section class="land-hero">
+    <div class="frame">
+        <div class="rise rise-1">
+            <span class="hero-eyebrow">
+                <span class="live-dot"></span>
+                <span>v3 · Operator system online</span>
+            </span>
+            <h1 class="hero-title">
+                Code under<br>
+                pressure.<br>
+                <em>Engineered.</em>
+            </h1>
+            <p class="hero-lead">
+                CodeArena is a sandboxed, proctored, real-time coding assessment surface built for engineering teams that hire on signal — not theatre. Run contests. Measure depth. Eliminate cheat vectors.
+            </p>
+            <div class="hero-cta">
+                {% if user.is_authenticated %}
+                <a href="{% url 'dashboard:home' %}" class="btn btn-primary btn-lg">
+                    <span>Open dashboard</span>
+                    <svg class="i"><use href="#i-arrow-r"/></svg>
+                </a>
+                {% else %}
+                <a href="{% url 'accounts:register' %}" class="btn btn-primary btn-lg">
+                    <span>Start free</span>
+                    <svg class="i"><use href="#i-arrow-r"/></svg>
+                </a>
+                {% endif %}
+                <a href="{% url 'contests:list' %}" class="btn btn-outline btn-lg">
+                    <svg class="i"><use href="#i-arena"/></svg>
+                    <span>Browse contests</span>
+                </a>
+            </div>
+
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <span class="v t-mono">{{ stat_languages|default:"12" }}+</span>
+                    <span class="l">Languages</span>
+                </div>
+                <div class="hero-stat">
+                    <span class="v t-mono">~80ms</span>
+                    <span class="l">Sandbox cold</span>
+                </div>
+                <div class="hero-stat">
+                    <span class="v t-mono">99.9%</span>
+                    <span class="l">Isolation</span>
+                </div>
+                <div class="hero-stat">
+                    <span class="v t-mono">0</span>
+                    <span class="l">Host exposure</span>
+                </div>
+            </div>
+        </div>
+
+        {# ─ Animated terminal preview ─ #}
+        <div class="rise rise-3">
+            <div class="hero-terminal">
+                <div class="term-head">
+                    <span class="dots">
+                        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                    </span>
+                    <span class="title">~/codearena · session://contest-9F1A</span>
+                </div>
+                <div class="term-body" id="term-body">
+                    <div class="cmd">codearena init --role recruiter</div>
+                    <div class="out">→ workspace provisioned · hex://node-09</div>
+                    <div class="ok">✓ docker sandbox · ready</div>
+                    <div class="cmd">codearena contest create "Backend · Sept"</div>
+                    <div class="out">→ visibility=invite · duration=90m · proctor=on</div>
+                    <div class="ok">✓ contest_id=C-2A1B published</div>
+                    <div class="cmd">codearena watch --live</div>
+                    <div class="info">▸ 47 candidates active · avg latency 24ms</div>
+                    <div class="warn">▸ 2 tab-switch events flagged</div>
+                    <div class="out">▸ leaderboard frozen at T-10m</div>
+                    <div class="cmd typing" id="typing"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# ─── FEATURES (asymmetric grid) ─────────────────────────────────── #}
+<section class="land-section" id="features">
+    <div class="frame">
+        <div class="section-head">
+            <span class="index">01 / engine</span>
+            <h2>An assessment surface<br>that holds up under load.</h2>
+            <div class="head-meta">
+                <div>Six modules · one</div>
+                <div>contiguous control plane.</div>
+            </div>
+        </div>
+
+        <div class="feat-grid">
+            <div class="feat wide rise rise-1">
+                <div class="feat-num">/ 001 — IDE</div>
+                <svg class="feat-icon i-xl"><use href="#i-code"/></svg>
+                <h3>A real editor. Not a textarea pretending.</h3>
+                <p>Multi-language editor with syntax highlighting, custom input, and per-test feedback. Auto-saves drafts every 30s — candidates never lose work to a flaky connection.</p>
+            </div>
+
+            <div class="feat rise rise-2">
+                <div class="feat-num">/ 002 — SANDBOX</div>
+                <svg class="feat-icon i-xl"><use href="#i-container"/></svg>
+                <h3>Docker-isolated execution.</h3>
+                <p>Every submission runs in an ephemeral container with time and memory limits. The host is never reachable.</p>
+            </div>
+
+            <div class="feat rise rise-2">
+                <div class="feat-num">/ 003 — PROCTOR</div>
+                <svg class="feat-icon i-xl"><use href="#i-shield"/></svg>
+                <h3>Anti-cheat by construction.</h3>
+                <p>Tab switches, blur events, copy/paste, right-click, fullscreen exits — all instrumented with audit logs.</p>
+            </div>
+
+            <div class="feat rise rise-3">
+                <div class="feat-num">/ 004 — TIMING</div>
+                <svg class="feat-icon i-xl"><use href="#i-clock"/></svg>
+                <h3>Deadline-aware sessions.</h3>
+                <p>Server-authoritative timers, auto-submit on expiry, freeze-points for leaderboards in late stages.</p>
+            </div>
+
+            <div class="feat rise rise-3">
+                <div class="feat-num">/ 005 — LEADERBOARD</div>
+                <svg class="feat-icon i-xl"><use href="#i-trophy"/></svg>
+                <h3>Real-time rank surface.</h3>
+                <p>Live scoring, freeze states, tiebreakers, and per-question acceptance graphs. Export anytime.</p>
+            </div>
+
+            <div class="feat wide rise rise-4" style="border-bottom: 1px solid var(--line);">
+                <div class="feat-num">/ 006 — ANALYTICS</div>
+                <svg class="feat-icon i-xl"><use href="#i-chart"/></svg>
+                <h3>Decisions you can actually defend.</h3>
+                <p>Per-question pass rate, score distribution, violation matrix, time-to-first-AC, and exportable PDF / CSV / Excel reports for every contest.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# ─── FLOW (numbered editorial steps) ────────────────────────────── #}
+<section class="land-section" id="flow">
+    <div class="frame">
+        <div class="section-head">
+            <span class="index">02 / flow</span>
+            <h2>Four steps. Zero ceremony.</h2>
+            <div class="head-meta">
+                <div>From draft to</div>
+                <div>signal in ~6 minutes.</div>
+            </div>
+        </div>
+
+        <div class="grid-12">
+            <div class="rise rise-1" style="grid-column: span 6;">
+                <div class="module">
+                    <span class="tag-id">/ STEP 01</span>
+                    <div class="module-body">
+                        <div class="row-tight" style="margin-bottom:14px;">
+                            <svg class="i i-lg t-signal"><use href="#i-edit"/></svg>
+                            <span class="t-label">Author</span>
+                        </div>
+                        <h3 class="t-h2" style="margin-bottom:8px;">Compose the test.</h3>
+                        <p class="t-body">Drop in coding problems, MCQs, or open-ended prompts. Define test cases. Set difficulty. Mix and match — no fixed templates.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rise rise-2" style="grid-column: span 6;">
+                <div class="module">
+                    <span class="tag-id">/ STEP 02</span>
+                    <div class="module-body">
+                        <div class="row-tight" style="margin-bottom:14px;">
+                            <svg class="i i-lg t-signal"><use href="#i-send"/></svg>
+                            <span class="t-label">Distribute</span>
+                        </div>
+                        <h3 class="t-h2" style="margin-bottom:8px;">Invite or publish.</h3>
+                        <p class="t-body">Email-gated invitations, password-protected entry, or public listings. Track who started, finished, or abandoned.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rise rise-3" style="grid-column: span 6;">
+                <div class="module">
+                    <span class="tag-id">/ STEP 03</span>
+                    <div class="module-body">
+                        <div class="row-tight" style="margin-bottom:14px;">
+                            <svg class="i i-lg t-signal"><use href="#i-monitor"/></svg>
+                            <span class="t-label">Monitor</span>
+                        </div>
+                        <h3 class="t-h2" style="margin-bottom:8px;">Watch the room.</h3>
+                        <p class="t-body">Live status, violation events, and submission stream. Freeze the leaderboard. Reset a candidate. Announce mid-contest.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rise rise-4" style="grid-column: span 6;">
+                <div class="module">
+                    <span class="tag-id">/ STEP 04</span>
+                    <div class="module-body">
+                        <div class="row-tight" style="margin-bottom:14px;">
+                            <svg class="i i-lg t-signal"><use href="#i-chart"/></svg>
+                            <span class="t-label">Decide</span>
+                        </div>
+                        <h3 class="t-h2" style="margin-bottom:8px;">Read the signal.</h3>
+                        <p class="t-body">Score distribution, per-question difficulty calibration, integrity flags. Export everything. Make the call.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# ─── CTA ────────────────────────────────────────────────────────── #}
+<section class="land-section" style="background: var(--ink-1);">
+    <div class="frame">
+        <div class="row-space" style="padding: 24px 0; flex-wrap: wrap; gap: 32px;">
+            <div style="max-width: 640px;">
+                <span class="t-label" style="color: var(--signal); margin-bottom: 12px; display: block;">/ ENGAGE</span>
+                <h2 class="t-h1">Run your first contest in under ten minutes.</h2>
+                <p class="t-body" style="margin-top: 12px;">Spin up a workspace, drop in a question, share the link. We handle the rest — sandboxing, timing, scoring, and the receipts.</p>
+            </div>
+            <div class="row-tight">
+                {% if user.is_authenticated %}
+                <a href="{% url 'dashboard:home' %}" class="btn btn-primary btn-lg">
+                    <span>Open dashboard</span>
+                    <svg class="i"><use href="#i-arrow-r"/></svg>
+                </a>
+                {% else %}
+                <a href="{% url 'accounts:register' %}" class="btn btn-primary btn-lg">
+                    <span>Create account</span>
+                    <svg class="i"><use href="#i-arrow-r"/></svg>
+                </a>
+                <a href="{% url 'accounts:login' %}" class="btn btn-outline btn-lg">Sign in</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+{# ─── Footer ─────────────────────────────────────────────────────── #}
+<footer class="land-footer">
+    <div class="frame">
+        <div class="row-tight">
+            <svg class="i i-lg t-signal"><use href="#i-mark"/></svg>
+            <span class="t-label">CodeArena · Operator system v3</span>
+        </div>
+        <div class="copy">© 2026 · Engineered, not decorated.</div>
+    </div>
+</footer>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const queue = [
+        'codearena export --format pdf --include violations',
+        'codearena freeze --at T-10',
+        'codearena report --contest C-2A1B',
+        'codearena candidates --status active',
+        'codearena seed --questions ./bank/algo-pack-v3'
+    ];
+    const target = document.getElementById('typing');
+    if (!target) return;
+    let qi = 0;
+    function typeNext() {
+        const text = queue[qi % queue.length];
+        let i = 0;
+        target.textContent = '';
+        const interval = setInterval(() => {
+            target.textContent = text.slice(0, i++);
+            if (i > text.length) {
+                clearInterval(interval);
+                setTimeout(() => { qi++; typeNext(); }, 2200);
+            }
+        }, 38);
+    }
+    typeNext();
+
+    // Subtle parallax on terminal hover
+    const term = document.querySelector('.hero-terminal');
+    if (!term || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const wrap = term.parentElement;
+    wrap.addEventListener('mousemove', e => {
+        const r = wrap.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width - 0.5;
+        const y = (e.clientY - r.top) / r.height - 0.5;
+        term.style.transform = `perspective(1200px) rotateY(${-6 + x*4}deg) rotateX(${2 - y*4}deg) translateY(${-y*4}px)`;
+    });
+    wrap.addEventListener('mouseleave', () => {
+        term.style.transform = 'perspective(1200px) rotateY(-6deg) rotateX(2deg)';
+    });
+})();
+</script>
+{% endblock %}

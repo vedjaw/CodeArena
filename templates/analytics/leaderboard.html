@@ -1,0 +1,107 @@
+{% extends "base/app.html" %}
+{% block title %}Leaderboard — {{ contest.title }}{% endblock %}
+{% block crumb_label %}Leaderboard · {{ contest.title|truncatechars:24 }}{% endblock %}
+
+{% block app_content %}
+<div class="page-head rise">
+    <div>
+        <div class="eyebrow">/ {{ contest.slug|upper }} · STANDINGS</div>
+        <h1>Leaderboard.</h1>
+        <p class="sub">
+            {{ contest.title }}
+            {% if is_frozen %}<span class="badge badge-warning" style="margin-left:8px;">Frozen</span>{% endif %}
+        </p>
+    </div>
+    <a href="{% url 'contests:detail' slug=contest.slug %}" class="btn btn-secondary">
+        <svg class="i"><use href="#i-arrow-l"/></svg>
+        <span>Contest</span>
+    </a>
+</div>
+
+{% if entries %}
+    {# ─ Podium (top 3) ─ #}
+    <div class="podium rise rise-1">
+        {# 2nd place (left) #}
+        {% for e in entries %}{% if e.rank == 2 %}
+        <div class="podium-card second">
+            <div class="t-label">/ 2ND</div>
+            <div class="pos" style="margin-top:8px;">02</div>
+            <div class="who">{{ e.user.get_full_name|default:e.user.email }}</div>
+            <div class="score">
+                <span class="t-signal" style="font-weight:700;font-size:1.2rem;">{{ e.score }}</span> pts
+            </div>
+        </div>
+        {% endif %}{% endfor %}
+
+        {# 1st place (center) #}
+        {% for e in entries %}{% if e.rank == 1 %}
+        <div class="podium-card first">
+            <div class="t-label" style="color: #ffd84d;">/ CHAMPION</div>
+            <div class="pos" style="margin-top:8px;">01</div>
+            <div class="who" style="font-size:1.15rem;">{{ e.user.get_full_name|default:e.user.email }}</div>
+            <div class="score">
+                <span class="t-signal" style="font-weight:700;font-size:1.4rem;">{{ e.score }}</span> pts
+            </div>
+        </div>
+        {% endif %}{% endfor %}
+
+        {# 3rd place (right) #}
+        {% for e in entries %}{% if e.rank == 3 %}
+        <div class="podium-card third">
+            <div class="t-label">/ 3RD</div>
+            <div class="pos" style="margin-top:8px;">03</div>
+            <div class="who">{{ e.user.get_full_name|default:e.user.email }}</div>
+            <div class="score">
+                <span class="t-signal" style="font-weight:700;font-size:1.2rem;">{{ e.score }}</span> pts
+            </div>
+        </div>
+        {% endif %}{% endfor %}
+    </div>
+{% endif %}
+
+<section class="module rise rise-2">
+    <div class="module-head">
+        <h3>Full standings</h3>
+        <span class="t-label">{{ entries|length }} contender{{ entries|length|pluralize }}</span>
+    </div>
+    <div class="module-body tight">
+        <table class="dgrid">
+            <thead>
+                <tr>
+                    <th style="width:80px;">Rank</th>
+                    <th>Candidate</th>
+                    <th style="width:120px;">Score</th>
+                    <th style="width:120px;">Violations</th>
+                    <th style="width:120px;">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in entries %}
+                <tr>
+                    <td>
+                        <span class="lb-rank {% if e.rank == 1 %}gold{% elif e.rank == 2 %}silver{% elif e.rank == 3 %}bronze{% endif %}">
+                            #{{ e.rank|stringformat:"02d" }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="cell-strong">{{ e.user.get_full_name|default:"—" }}</div>
+                        <div class="cell-mono t-micro t-muted">{{ e.user.email }}</div>
+                    </td>
+                    <td class="cell-mono cell-strong" style="font-size:1rem;color:var(--signal);">{{ e.score }}</td>
+                    <td>
+                        {% if e.violations > 0 %}
+                            <span class="badge badge-danger">{{ e.violations }}</span>
+                        {% else %}
+                            <span class="t-mono t-muted">0</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="badge badge-success">{{ e.status }}</span></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5"><div class="empty" style="margin:16px;"><svg class="i icon"><use href="#i-trophy"/></svg><h3>No entries yet</h3><p>Standings will populate as candidates submit.</p></div></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

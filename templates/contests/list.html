@@ -1,0 +1,87 @@
+{% extends "base/app.html" %}
+{% load humanize %}
+{% block title %}Contests — CodeArena{% endblock %}
+{% block crumb_label %}Contests{% endblock %}
+
+{% block app_content %}
+<div class="page-head rise">
+    <div>
+        <div class="eyebrow">/ ARENA · REGISTRY</div>
+        <h1>Contests.</h1>
+        <p class="sub t-mono">Live, upcoming, and archived assessments across the platform.</p>
+    </div>
+    {% if is_recruiter or is_admin %}
+    <a href="{% url 'contests:create' %}" class="btn btn-primary btn-lg">
+        <svg class="i"><use href="#i-plus"/></svg>
+        <span>New contest</span>
+    </a>
+    {% endif %}
+</div>
+
+<form method="get" class="module rise rise-1 mb-4" style="padding: 0;">
+    <div class="module-body" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+        <div class="form-group" style="flex:1;min-width:240px;margin:0;">
+            <label>Search</label>
+            <div style="position:relative;">
+                <svg class="i" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--chalk-3);"><use href="#i-search"/></svg>
+                <input type="text" name="search" value="{{ search }}" placeholder="title, slug…" style="padding-left:36px;">
+            </div>
+        </div>
+        <div class="form-group" style="min-width:200px;margin:0;">
+            <label>Status</label>
+            <select name="status">
+                <option value="">All states</option>
+                <option value="upcoming" {% if status_filter == 'upcoming' %}selected{% endif %}>Upcoming</option>
+                <option value="ongoing" {% if status_filter == 'ongoing' %}selected{% endif %}>Ongoing</option>
+                <option value="past" {% if status_filter == 'past' %}selected{% endif %}>Past</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-secondary">
+            <svg class="i"><use href="#i-filter"/></svg>
+            <span>Filter</span>
+        </button>
+    </div>
+</form>
+
+<div class="grid-3 rise rise-2">
+    {% for c in contests %}
+    <div class="brief {% if c.start_time > now %}upcoming{% elif c.end_time < now %}past{% else %}live{% endif %}">
+        <div class="brief-top">
+            <div>
+                <div class="brief-id">/ {{ c.slug|upper|truncatechars:18 }}</div>
+                <h3 style="margin-top:6px;"><a href="{% url 'contests:detail' slug=c.slug %}">{{ c.title }}</a></h3>
+            </div>
+            {% if c.start_time > now %}
+                <span class="badge badge-info">Upcoming</span>
+            {% elif c.end_time < now %}
+                <span class="badge badge-secondary">Ended</span>
+            {% else %}
+                <span class="badge badge-live">Live</span>
+            {% endif %}
+        </div>
+        <p class="desc">{{ c.description|default:""|truncatewords:22 }}</p>
+        <div class="meta">
+            <span class="meta-item"><svg class="i"><use href="#i-clock"/></svg>{{ c.duration_minutes }}m</span>
+            <span class="meta-item"><svg class="i"><use href="#i-doc"/></svg>{{ c.num_questions|default:c.question_count }} Q</span>
+            <span class="meta-item"><svg class="i"><use href="#i-calendar"/></svg>{{ c.start_time|date:"M d" }}</span>
+            {% if c.visibility == 'password' %}
+            <span class="meta-item"><svg class="i"><use href="#i-lock"/></svg>locked</span>
+            {% endif %}
+        </div>
+        <div class="brief-foot">
+            <span class="t-mono t-micro t-muted">/ {{ c.start_time|date:"H:i" }}</span>
+            <a href="{% url 'contests:detail' slug=c.slug %}" class="btn btn-outline btn-sm">
+                <span>Open</span>
+                <svg class="i"><use href="#i-arrow-r"/></svg>
+            </a>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty" style="grid-column:1 / -1;">
+        <svg class="i icon"><use href="#i-arena"/></svg>
+        <h3>No contests match these filters</h3>
+        <p>Try adjusting your search or check back later.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

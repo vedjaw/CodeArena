@@ -1,0 +1,180 @@
+{% extends "base/base.html" %}
+{% load static %}
+{% block title %}System check — CodeArena{% endblock %}
+
+{% block extra_css %}
+<style>
+.check-list { display: flex; flex-direction: column; }
+.check-row {
+    display: grid;
+    grid-template-columns: 56px 1fr auto;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--line-faint);
+}
+.check-row:last-child { border-bottom: none; }
+.check-glyph {
+    width: 40px; height: 40px;
+    display: grid; place-items: center;
+    border: 1px solid var(--line-strong);
+    background: var(--ink-2);
+    color: var(--chalk-3);
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+.check-glyph.pending { color: var(--cyan); border-color: rgba(124,217,255,0.4); animation: pulse 1.6s ease-in-out infinite; }
+.check-glyph.pass { color: var(--signal-ink); background: var(--signal); border-color: var(--signal); }
+.check-glyph.fail { color: var(--red); border-color: rgba(255,91,91,0.4); background: rgba(255,91,91,0.05); }
+.check-label { font-weight: 600; color: var(--chalk-0); font-size: 0.95rem; }
+.check-sub { font-family: var(--font-mono); font-size: 0.78rem; color: var(--chalk-3); margin-top: 2px; }
+.check-status { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--chalk-3); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+    <aside class="auth-aside">
+        <a href="{% url 'landing' %}" class="auth-mark">
+            <svg class="i i-lg"><use href="#i-mark"/></svg>
+            <span>CodeArena</span>
+        </a>
+
+        <div>
+            <span class="t-label" style="color: var(--signal); margin-bottom: 16px; display:block;">/ PRE-FLIGHT</span>
+            <h2>System check.<br>Before you enter.</h2>
+            <p class="pitch">We're verifying your environment is ready: a modern browser, sufficient screen real-estate, and a stable connection.</p>
+            <div class="pillars">
+                <div class="pillar"><svg class="i"><use href="#i-monitor"/></svg><span class="lbl">Display compatibility</span></div>
+                <div class="pillar"><svg class="i"><use href="#i-globe"/></svg><span class="lbl">Browser support</span></div>
+                <div class="pillar"><svg class="i"><use href="#i-wifi"/></svg><span class="lbl">Network reachable</span></div>
+                {% if require_camera %}<div class="pillar"><svg class="i"><use href="#i-camera"/></svg><span class="lbl">Camera permission</span></div>{% endif %}
+            </div>
+        </div>
+
+        <div class="foot">v3 · operator system online</div>
+    </aside>
+
+    <section class="auth-main">
+        <button class="theme-toggle" onclick="caToggleTheme()" title="Toggle theme" aria-label="Toggle theme" style="position:absolute;top:20px;right:20px;">
+            <svg class="i t-icon-sun"><use href="#i-sun"/></svg>
+            <svg class="i t-icon-moon"><use href="#i-moon"/></svg>
+        </button>
+        <div class="auth-card" style="max-width: 520px;">
+            <div class="step">/ PRE-FLIGHT</div>
+            <h1>System check.</h1>
+            <p class="lead">{{ contest.title }} — verify before entering.</p>
+
+            <div class="module" style="margin-top: 32px;">
+                <div class="module-body">
+                    <div class="check-list">
+                        <div class="check-row">
+                            <div class="check-glyph pending" id="status-browser">··</div>
+                            <div>
+                                <div class="check-label">Browser compatibility</div>
+                                <div class="check-sub">fetch · promise · audio APIs</div>
+                            </div>
+                            <span class="check-status">probing</span>
+                        </div>
+                        <div class="check-row">
+                            <div class="check-glyph pending" id="status-screen">··</div>
+                            <div>
+                                <div class="check-label">Screen resolution</div>
+                                <div class="check-sub">minimum 1024 × 768</div>
+                            </div>
+                            <span class="check-status">probing</span>
+                        </div>
+                        {% if require_fullscreen %}
+                        <div class="check-row">
+                            <div class="check-glyph pending" id="status-fullscreen">··</div>
+                            <div>
+                                <div class="check-label">Fullscreen API</div>
+                                <div class="check-sub">contest requires fullscreen lock</div>
+                            </div>
+                            <span class="check-status">probing</span>
+                        </div>
+                        {% endif %}
+                        {% if require_camera %}
+                        <div class="check-row">
+                            <div class="check-glyph pending" id="status-camera">··</div>
+                            <div>
+                                <div class="check-label">Camera access</div>
+                                <div class="check-sub">required for proctoring</div>
+                            </div>
+                            <span class="check-status">probing</span>
+                        </div>
+                        {% endif %}
+                        <div class="check-row">
+                            <div class="check-glyph pending" id="status-connection">··</div>
+                            <div>
+                                <div class="check-label">Network connection</div>
+                                <div class="check-sub">edge reachability</div>
+                            </div>
+                            <span class="check-status">probing</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <form method="post" action="{% url 'contests:start' slug=contest.slug %}" id="start-form" style="margin-top: 24px;">
+                {% csrf_token %}
+                <button type="submit" id="start-btn" class="btn btn-primary btn-lg w-full" disabled>
+                    <svg class="i"><use href="#i-clock"/></svg>
+                    <span>Running checks…</span>
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <a href="{% url 'contests:detail' slug=contest.slug %}">
+                    <svg class="i" style="margin-right:6px;"><use href="#i-arrow-l"/></svg>
+                    Back to briefing
+                </a>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+let allPassed = true;
+function setStatus(id, pass) {
+    const el = document.getElementById('status-' + id);
+    if (!el) return;
+    el.className = 'check-glyph ' + (pass ? 'pass' : 'fail');
+    el.textContent = pass ? '✓' : '✕';
+    const row = el.closest('.check-row');
+    if (row) row.querySelector('.check-status').textContent = pass ? 'ready' : 'failed';
+    if (!pass) allPassed = false;
+}
+
+setStatus('browser', 'fetch' in window && 'Promise' in window);
+setStatus('screen', window.screen.width >= 1024 && window.screen.height >= 768);
+
+{% if require_fullscreen %}
+setStatus('fullscreen', !!(document.fullscreenEnabled || document.webkitFullscreenEnabled));
+{% endif %}
+
+{% if require_camera %}
+navigator.mediaDevices.getUserMedia({video: true})
+    .then(() => setStatus('camera', true))
+    .catch(() => setStatus('camera', false))
+    .finally(checkDone);
+{% endif %}
+
+fetch('{% url "landing" %}', {method: 'HEAD'})
+    .then(() => setStatus('connection', true))
+    .catch(() => setStatus('connection', false))
+    .finally(checkDone);
+
+function checkDone() {
+    const btn = document.getElementById('start-btn');
+    btn.disabled = false;
+    if (allPassed) {
+        btn.innerHTML = '<svg class="i"><use href="#i-play"/></svg><span>Begin contest</span>';
+    } else {
+        btn.innerHTML = '<svg class="i"><use href="#i-alert"/></svg><span>Some checks failed — Continue anyway</span>';
+    }
+}
+setTimeout(checkDone, 2000);
+</script>
+{% endblock %}

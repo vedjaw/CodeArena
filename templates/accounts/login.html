@@ -1,0 +1,73 @@
+{% extends "base/base.html" %}
+{% block title %}Sign in — CodeArena{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+    <aside class="auth-aside">
+        <a href="{% url 'landing' %}" class="auth-mark">
+            <svg class="i i-lg"><use href="#i-mark"/></svg>
+            <span>CodeArena</span>
+        </a>
+
+        <div>
+            <span class="t-label" style="color: var(--signal); margin-bottom: 16px; display:block;">/ ACCESS</span>
+            <h2>Authenticate to the<br>control surface.</h2>
+            <p class="pitch">A sandboxed, proctored coding-assessment platform engineered for teams who hire on signal.</p>
+
+            <div class="pillars">
+                <div class="pillar">
+                    <span class="num">001</span>
+                    <svg class="i"><use href="#i-container"/></svg>
+                    <span class="lbl">Sandboxed execution</span>
+                </div>
+                <div class="pillar">
+                    <span class="num">002</span>
+                    <svg class="i"><use href="#i-shield"/></svg>
+                    <span class="lbl">Anti-cheat proctoring</span>
+                </div>
+                <div class="pillar">
+                    <span class="num">003</span>
+                    <svg class="i"><use href="#i-bolt"/></svg>
+                    <span class="lbl">Real-time leaderboards</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="foot">v3 · operator system online</div>
+    </aside>
+
+    <section class="auth-main">
+        <button class="theme-toggle" onclick="caToggleTheme()" title="Toggle theme" aria-label="Toggle theme" style="position:absolute;top:20px;right:20px;">
+            <svg class="i t-icon-sun"><use href="#i-sun"/></svg>
+            <svg class="i t-icon-moon"><use href="#i-moon"/></svg>
+        </button>
+        <div class="auth-card">
+            <div class="step">/ STEP 01 · IDENTIFY</div>
+            <h1>Welcome back.</h1>
+            <p class="lead">Sign in to your CodeArena workspace.</p>
+
+            <form method="POST">
+                {% csrf_token %}
+                {% for field in form %}
+                <div class="form-group">
+                    <label>{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                    <div class="form-error">{{ field.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                <button type="submit" class="btn btn-primary btn-lg w-full">
+                    <span>Sign in</span>
+                    <svg class="i"><use href="#i-arrow-r"/></svg>
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <a href="{% url 'accounts:forgot_password' %}">Forgot password?</a>
+                <span>No account? <a href="{% url 'accounts:register' %}">Create one</a></span>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

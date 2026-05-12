@@ -1,0 +1,63 @@
+{% extends "base/base.html" %}
+{% block title %}Enter contest — CodeArena{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+    <aside class="auth-aside">
+        <a href="{% url 'landing' %}" class="auth-mark">
+            <svg class="i i-lg"><use href="#i-mark"/></svg>
+            <span>CodeArena</span>
+        </a>
+
+        <div>
+            <span class="t-label" style="color: var(--signal); margin-bottom: 16px; display:block;">/ GATED CONTEST</span>
+            <h2>{{ contest.title }}</h2>
+            <p class="pitch">This contest is password-protected. Enter the code provided by your recruiter to unlock the session.</p>
+
+            <div class="pillars">
+                <div class="pillar">
+                    <svg class="i"><use href="#i-lock"/></svg>
+                    <span class="lbl">Restricted access</span>
+                </div>
+                <div class="pillar">
+                    <svg class="i"><use href="#i-clock"/></svg>
+                    <span class="lbl">{{ contest.duration_minutes }} minute session</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="foot">v3 · operator system online</div>
+    </aside>
+
+    <section class="auth-main">
+        <button class="theme-toggle" onclick="caToggleTheme()" title="Toggle theme" aria-label="Toggle theme" style="position:absolute;top:20px;right:20px;">
+            <svg class="i t-icon-sun"><use href="#i-sun"/></svg>
+            <svg class="i t-icon-moon"><use href="#i-moon"/></svg>
+        </button>
+        <div class="auth-card">
+            <div class="step">/ STEP 02 · UNLOCK</div>
+            <h1>Password required.</h1>
+            <p class="lead">Enter the access code for <strong>{{ contest.title }}</strong>.</p>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Contest password</label>
+                    {{ form.password }}
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg w-full">
+                    <svg class="i"><use href="#i-arrow-r"/></svg>
+                    <span>Unlock & continue</span>
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <a href="{% url 'contests:detail' slug=contest.slug %}">
+                    <svg class="i" style="margin-right:6px;"><use href="#i-arrow-l"/></svg>
+                    Back to briefing
+                </a>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

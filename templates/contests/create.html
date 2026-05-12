@@ -1,0 +1,110 @@
+{% extends "base/app.html" %}
+{% block title %}New contest — CodeArena{% endblock %}
+{% block crumb_label %}Contests · New{% endblock %}
+
+{% block app_content %}
+<div class="page-head">
+    <div>
+        <div class="eyebrow">/ NEW · BLUEPRINT</div>
+        <h1>Provision a contest.</h1>
+        <p class="sub t-mono">Six sections. Save when ready. Publish later.</p>
+    </div>
+    <a href="{% url 'contests:list' %}" class="btn btn-secondary">
+        <svg class="i"><use href="#i-arrow-l"/></svg>
+        <span>Back</span>
+    </a>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="stack-4">
+    {% csrf_token %}
+
+    <section class="module">
+        <span class="tag-id">/ 01 — IDENTITY</span>
+        <div class="module-head"><h3>Basic information</h3></div>
+        <div class="module-body">
+            <div class="form-group"><label>Title</label>{{ form.title }}</div>
+            <div class="form-group"><label>Description</label>{{ form.description }}</div>
+            <div class="form-group"><label>Instructions</label>{{ form.instructions }}</div>
+            <div class="form-group"><label>Banner image</label>{{ form.banner_image }}</div>
+        </div>
+    </section>
+
+    <section class="module">
+        <span class="tag-id">/ 02 — SCHEDULE</span>
+        <div class="module-head"><h3>Window</h3></div>
+        <div class="module-body">
+            <div class="grid-3">
+                <div class="form-group"><label>Start time</label>{{ form.start_time }}</div>
+                <div class="form-group"><label>End time</label>{{ form.end_time }}</div>
+                <div class="form-group"><label>Duration (min)</label>{{ form.duration_minutes }}</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="module">
+        <span class="tag-id">/ 03 — ACCESS</span>
+        <div class="module-head"><h3>Access & scoring</h3></div>
+        <div class="module-body">
+            <div class="grid-3">
+                <div class="form-group"><label>Visibility</label>{{ form.visibility }}</div>
+                <div class="form-group"><label>Password (if gated)</label>{{ form.access_password }}</div>
+                <div class="form-group"><label>Total marks</label>{{ form.total_marks }}</div>
+            </div>
+            <div class="grid-2 mt-3">
+                <div class="form-group"><label>Passing %</label>{{ form.passing_percentage }}</div>
+                <div class="form-check" style="margin-top:32px;">{{ form.negative_marking }} <label for="{{ form.negative_marking.id_for_label }}">Enable negative marking</label></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="module">
+        <span class="tag-id">/ 04 — PROCTOR</span>
+        <div class="module-head"><h3>Proctoring</h3></div>
+        <div class="module-body">
+            <div class="grid-3">
+                <div class="form-check">{{ form.enable_proctoring }} <label for="{{ form.enable_proctoring.id_for_label }}">Enable proctoring</label></div>
+                <div class="form-check">{{ form.fullscreen_required }} <label for="{{ form.fullscreen_required.id_for_label }}">Fullscreen required</label></div>
+                <div class="form-check">{{ form.auto_submit_on_violation }} <label for="{{ form.auto_submit_on_violation.id_for_label }}">Auto-submit on max</label></div>
+            </div>
+            <div class="grid-2 mt-3">
+                <div class="form-group"><label>Max violations</label>{{ form.max_violations }}</div>
+                <div class="form-check" style="margin-top:32px;">{{ form.enable_webcam }} <label for="{{ form.enable_webcam.id_for_label }}">Enable webcam</label></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="module">
+        <span class="tag-id">/ 05 — BEHAVIOR</span>
+        <div class="module-head"><h3>Session behavior</h3></div>
+        <div class="module-body">
+            <div class="grid-2">
+                <div class="form-check">{{ form.shuffle_questions }} <label for="{{ form.shuffle_questions.id_for_label }}">Shuffle questions</label></div>
+                <div class="form-check">{{ form.shuffle_options }} <label for="{{ form.shuffle_options.id_for_label }}">Shuffle MCQ options</label></div>
+                <div class="form-check">{{ form.show_results_immediately }} <label for="{{ form.show_results_immediately.id_for_label }}">Show results immediately</label></div>
+                <div class="form-check">{{ form.leaderboard_visible }} <label for="{{ form.leaderboard_visible.id_for_label }}">Public leaderboard</label></div>
+            </div>
+        </div>
+    </section>
+
+    {% if form.errors %}
+    <div class="alert alert-error">
+        <svg class="i"><use href="#i-alert"/></svg>
+        <div>
+            <strong>Fix the following:</strong>
+            <ul style="list-style: none; margin-top: 8px;">
+                {% for field in form %}{% for error in field.errors %}<li>· <strong>{{ field.label }}:</strong> {{ error }}</li>{% endfor %}{% endfor %}
+                {% for error in form.non_field_errors %}<li>· {{ error }}</li>{% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row-tight">
+        <button type="submit" class="btn btn-primary btn-lg">
+            <svg class="i"><use href="#i-check"/></svg>
+            <span>Create contest</span>
+        </button>
+        <a href="{% url 'contests:list' %}" class="btn btn-secondary btn-lg">Cancel</a>
+    </div>
+</form>
+{% endblock %}
