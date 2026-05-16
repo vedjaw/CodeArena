@@ -11,5 +11,6 @@ urlpatterns = [
     path('draft/<slug:contest_slug>/<int:question_id>/', views.save_draft, name='save_draft'),
     path('mcq/<slug:contest_slug>/<int:question_id>/', views.submit_mcq, name='submit_mcq'),
     path('subjective/<slug:contest_slug>/<int:question_id>/', views.submit_subjective, name='submit_subjective'),
+    path('test/<slug:contest_slug>/<int:question_id>/', views.test_code, name='test_code'),
     path('status/<int:submission_id>/', views.submission_status, name='status'),
 ]

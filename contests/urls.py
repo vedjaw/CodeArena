@@ -19,6 +19,7 @@ urlpatterns = [
     path('<slug:slug>/system-check/', views.system_check, name='system_check'),
     path('<slug:slug>/start/', views.contest_start, name='start'),
     path('<slug:slug>/take/', views.contest_take, name='take'),
+    path('<slug:slug>/preview/', views.contest_preview, name='preview'),
     path('<slug:slug>/submit/', views.contest_submit, name='submit'),
     path('<slug:slug>/invite/', views.send_invitations, name='invite'),
     path('<slug:slug>/invite/<int:invite_id>/remove/', views.remove_invitation, name='remove_invitation'),

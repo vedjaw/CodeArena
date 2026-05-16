@@ -40,6 +40,7 @@ def admin_dashboard(request):
         'total_submissions': Submission.objects.count(),
         'recent_activities': UserActivity.objects.select_related('user')[:20],
         'recent_users': User.objects.order_by('-date_joined')[:10],
+        'draft_contest_list': Contest.objects.filter(status='draft').select_related('created_by').order_by('-created_at'),
     }
     return render(request, 'accounts/admin_dashboard.html', context)
 
@@ -50,16 +51,18 @@ def recruiter_dashboard(request):
     """Recruiter dashboard with contest management overview."""
     now = timezone.now()
     my_contests = Contest.objects.filter(created_by=request.user)
+    draft_list = my_contests.filter(status='draft').order_by('-created_at')
     context = {
         'total_contests': my_contests.count(),
         'active_contests': my_contests.filter(
             start_time__lte=now, end_time__gte=now, status='published'
         ).count(),
-        'draft_contests': my_contests.filter(status='draft').count(),
+        'draft_contests': draft_list.count(),
         'total_participants': ContestSession.objects.filter(
             contest__created_by=request.user
         ).values('user').distinct().count(),
-        'recent_contests': my_contests.order_by('-created_at')[:5],
+        'recent_contests': my_contests.filter(status='published').order_by('-created_at')[:5],
+        'draft_contest_list': draft_list,
         'recent_submissions': Submission.objects.filter(
             contest__created_by=request.user
         ).select_related('user', 'contest', 'question').order_by('-submitted_at')[:10],

@@ -14,8 +14,8 @@
     })();
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/main.css' %}?v=20260512d">
-    <link rel="stylesheet" href="{% static 'css/ide.css' %}?v=20260512d">
+    <link rel="stylesheet" href="{% static 'css/main.css' %}?v=20260513a">
+    <link rel="stylesheet" href="{% static 'css/ide.css' %}?v=20260513a">
 </head>
 <body class="ide-body">
     {% include "base/icons.html" %}
@@ -35,6 +35,13 @@
             </div>
 
             <div class="ide-top-right">
+                {% if preview_mode %}
+                <span class="badge badge-warning" style="font-size:0.75rem;letter-spacing:0.06em;padding:4px 12px;">PREVIEW</span>
+                <a href="{% url 'contests:manage' slug=contest.slug %}" class="btn btn-secondary btn-sm">
+                    <svg class="i"><use href="#i-arrow-l"/></svg>
+                    <span>Back to manage</span>
+                </a>
+                {% else %}
                 <button class="theme-toggle" onclick="caToggleTheme()" title="Toggle theme" aria-label="Toggle theme">
                     <svg class="i t-icon-sun"><use href="#i-sun"/></svg>
                     <svg class="i t-icon-moon"><use href="#i-moon"/></svg>
@@ -50,20 +57,26 @@
                         <span>End contest</span>
                     </button>
                 </form>
+                {% endif %}
             </div>
         </header>
 
         {# ── Main split ──────────────────────────────────────────── #}
         <div class="ide-main">
             {# Question rail #}
-            <aside class="ide-aside">
+        <aside class="ide-aside" id="ide-aside">
                 <div class="ide-aside-head">
                     <span class="h">Questions · {{ questions|length }}</span>
-                    <span class="t-mono t-micro t-signal">LIVE</span>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span class="t-mono t-micro {% if preview_mode %}t-muted{% else %}t-signal{% endif %}">{% if preview_mode %}PREVIEW{% else %}LIVE{% endif %}</span>
+                        <button class="aside-toggle" id="aside-toggle" title="Collapse panel" onclick="toggleAside()">
+                            <svg class="i" style="width:14px;height:14px;transform:rotate(180deg);transition:transform 200ms;"><use href="#i-chev"/></svg>
+                        </button>
+                    </div>
                 </div>
                 <div class="ide-aside-list">
                     {% for q in questions %}
-                    <a href="?q={{ q.id }}" class="q-item {% if current_question.id == q.id %}active{% endif %}">
+                    <a href="{% if preview_mode %}{% url 'contests:preview' slug=contest.slug %}?q={{ q.id }}{% else %}?q={{ q.id }}{% endif %}" class="q-item {% if current_question.id == q.id %}active{% endif %}">
                         <div class="q-chip {% if q.id in drafts and drafts|get_item:q.id %}answered{% elif current_question.id == q.id %}current{% endif %}">{{ forloop.counter|stringformat:"02d" }}</div>
                         <div style="flex:1;min-width:0;">
                             <div class="q-title">{{ q.title|truncatechars:30 }}</div>
@@ -80,49 +93,58 @@
                 </div>
             </aside>
 
+            {# Resizer: aside ↔ problem #}
+            <div class="ide-resizer ide-resizer-v" id="resizer-aside" title="Drag to resize"></div>
+
+            {# Floating re-open tab (visible only when aside is collapsed) #}
+            <button class="aside-reopen" id="aside-reopen" title="Open questions panel" onclick="toggleAside()">
+                <svg class="i" style="width:12px;height:12px;flex-shrink:0;transform:rotate(180deg);"><use href="#i-chev"/></svg>
+                <span class="reopen-label">Questions</span>
+            </button>
+
             {# Workbench #}
             <section class="ide-bench" id="ide-bench">
                 {% if current_question %}
                 {% if current_question.question_type == 'coding' %}
                 {# CODING #}
-                <div class="ide-problem">
+                <div class="ide-problem" id="ide-problem">
                     <div class="ide-problem-head">
                         <span class="h">/ Problem statement</span>
                         <span class="badge {% if current_question.difficulty == 'easy' %}badge-success{% elif current_question.difficulty == 'medium' %}badge-warning{% else %}badge-danger{% endif %}">{{ current_question.get_difficulty_display }}</span>
                     </div>
                     <div class="ide-problem-body">
-                        <div class="t-label">/ Q{{ forloop.counter }} · {{ current_question.marks }} pts</div>
+                        <div class="t-label">/ Q · {{ current_question.marks }} pts</div>
                         <h2>{{ current_question.title }}</h2>
-                        <p>{{ current_question.coding_detail.problem_statement|linebreaks }}</p>
+                        <div class="problem-text">{{ current_question.coding_detail.problem_statement|render_text }}</div>
 
-                        {% if current_question.coding_detail.input_format %}
-                        <h3>Input format</h3>
-                        <pre>{{ current_question.coding_detail.input_format }}</pre>
-                        {% endif %}
-                        {% if current_question.coding_detail.output_format %}
-                        <h3>Output format</h3>
-                        <pre>{{ current_question.coding_detail.output_format }}</pre>
-                        {% endif %}
-                        {% if current_question.coding_detail.constraints %}
-                        <h3>Constraints</h3>
-                        <pre>{{ current_question.coding_detail.constraints }}</pre>
-                        {% endif %}
-                        {% if current_question.coding_detail.sample_input %}
-                        <h3>Sample input</h3>
-                        <pre>{{ current_question.coding_detail.sample_input }}</pre>
-                        {% endif %}
-                        {% if current_question.coding_detail.sample_output %}
-                        <h3>Sample output</h3>
-                        <pre>{{ current_question.coding_detail.sample_output }}</pre>
-                        {% endif %}
-                        {% if current_question.coding_detail.explanation %}
-                        <h3>Explanation</h3>
-                        <p>{{ current_question.coding_detail.explanation }}</p>
+                        {% if sample_test_cases %}
+                        <h3>Examples</h3>
+                        {% for tc in sample_test_cases %}
+                        <div class="sample-case">
+                            <div class="sample-case-head">
+                                <span class="t-label">Example {{ forloop.counter }}</span>
+                                {% if tc.description %}<span class="t-small t-muted" style="margin-left:8px;">{{ tc.description }}</span>{% endif %}
+                            </div>
+                            <div class="sample-case-pair">
+                                <div class="sample-case-col">
+                                    <span class="sample-case-label">Input</span>
+                                    <pre>{{ tc.input_data }}</pre>
+                                </div>
+                                <div class="sample-case-col">
+                                    <span class="sample-case-label">Output</span>
+                                    <pre>{{ tc.expected_output }}</pre>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
                         {% endif %}
                     </div>
                 </div>
 
-                <div class="ide-editor-col">
+                {# Resizer: problem ↔ editor #}
+                <div class="ide-resizer ide-resizer-v" id="resizer-bench" title="Drag to resize"></div>
+
+                <div class="ide-editor-col" id="ide-editor-col">
                     <div class="ide-editor-head">
                         <div class="left">
                             <svg class="i" style="color:var(--signal);"><use href="#i-code"/></svg>
@@ -131,9 +153,10 @@
                                 <option value="{{ lang }}">{{ lang|title }}</option>
                                 {% endfor %}
                             </select>
-                            <span class="t-mono t-micro t-muted">/ autosave · 30s</span>
+                            <span class="t-mono t-micro" id="save-status" style="color:var(--chalk-4);">/ autosave · on</span>
                         </div>
                         <div class="right">
+                            {% if preview_mode %}
                             <button class="btn btn-secondary btn-sm" id="run-btn" onclick="runCode(false)">
                                 <svg class="i"><use href="#i-play"/></svg>
                                 <span>Run</span>
@@ -142,6 +165,16 @@
                                 <svg class="i"><use href="#i-send"/></svg>
                                 <span>Submit</span>
                             </button>
+                            {% else %}
+                            <button class="btn btn-secondary btn-sm" id="run-btn" onclick="runCode(false)">
+                                <svg class="i"><use href="#i-play"/></svg>
+                                <span>Run</span>
+                            </button>
+                            <button class="btn btn-primary btn-sm" id="submit-btn" onclick="runCode(true)">
+                                <svg class="i"><use href="#i-send"/></svg>
+                                <span>Submit</span>
+                            </button>
+                            {% endif %}
                         </div>
                     </div>
 
@@ -150,7 +183,10 @@
 {% endif %}{% endwith %}</textarea>
                     </div>
 
-                    <div class="ide-console">
+                    {# Resizer: editor ↔ console #}
+                    <div class="ide-resizer ide-resizer-h" id="resizer-console" title="Drag to resize"></div>
+
+                    <div class="ide-console" id="ide-console">
                         <div class="ide-console-tabs">
                             <div class="ide-console-tab active" data-tab="output" onclick="showTab('output', event)">
                                 <svg class="i"><use href="#i-terminal"/></svg>
@@ -194,7 +230,7 @@
                         </label>
                         {% endfor %}
                     </div>
-                    <button class="btn btn-primary mt-4" onclick="submitMCQ()">
+                    <button class="btn btn-primary mt-4" {% if preview_mode %}disabled title="Disabled in preview"{% else %}onclick="submitMCQ()"{% endif %}>
                         <svg class="i"><use href="#i-check"/></svg>
                         <span>Save answer</span>
                     </button>
@@ -208,7 +244,7 @@
                     <div class="question-card t-body">{{ current_question.subjective_detail.question_text|linebreaks }}</div>
                     <textarea id="subjective-answer" rows="12" placeholder="Write your answer..."></textarea>
                     <div class="t-mono t-micro t-muted mt-2">Max {{ current_question.subjective_detail.max_word_count }} words</div>
-                    <button class="btn btn-primary mt-3" onclick="submitSubjective()">
+                    <button class="btn btn-primary mt-3" {% if preview_mode %}disabled title="Disabled in preview"{% else %}onclick="submitSubjective()"{% endif %}>
                         <svg class="i"><use href="#i-check"/></svg>
                         <span>Save answer</span>
                     </button>
@@ -225,6 +261,7 @@
         </div>
     </div>
 
+    {% if not preview_mode %}
     <div class="modal-overlay hidden" id="violation-modal">
         <div class="modal">
             <div class="row-tight mb-2">
@@ -254,9 +291,12 @@
         </div>
     </div>
     {% endif %}
+    {% endif %}
 
     {% if current_question.question_type == 'coding' %}
     {{ current_question.coding_detail.starter_code|json_script:"starter-code-data" }}
+    {# Per-language drafts for this question: {lang: code} #}
+    {{ drafts_by_lang|json_script:"drafts-by-lang-data" }}
     {% endif %}
     <script>
     function caToggleTheme() {
@@ -266,10 +306,135 @@
         localStorage.setItem('ca-theme', next);
     }
 
+    const IS_PREVIEW = {% if preview_mode %}true{% else %}false{% endif %};
+
+    function showTab(name, evt) {
+        document.querySelectorAll('.ide-console-tab').forEach(t => t.classList.remove('active'));
+        ['output','input','results'].forEach(t => {
+            const el = document.getElementById('tab-'+t);
+            if (el) el.classList.add('hidden');
+        });
+        const target = document.getElementById('tab-'+name);
+        if (target) target.classList.remove('hidden');
+        const targetTab = document.querySelector(`.ide-console-tab[data-tab="${name}"]`);
+        if (targetTab) targetTab.classList.add('active');
+    }
+
     const CONTEST_SLUG = '{{ contest.slug }}';
     const QUESTION_ID = {{ current_question.id|default:"0" }};
-    const DEADLINE = '{{ deadline_timestamp }}';
     const CSRF = '{{ csrf_token }}';
+
+    {% if preview_mode %}
+    function setMeta(text) {
+        const el = document.getElementById('console-meta');
+        if (el) el.textContent = text;
+    }
+
+    function runCode(isSubmit) {
+        const btn = isSubmit ? document.getElementById('submit-btn') : document.getElementById('run-btn');
+        const orig = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<svg class="i"><use href="#i-clock"/></svg><span>Executing…</span>';
+        setMeta(isSubmit ? '/ submitting…' : '/ running…');
+
+        const code = document.getElementById('code-editor').value;
+        const lang = document.getElementById('language-select').value;
+        const customInput = document.getElementById('custom-input')?.value || '';
+
+        fetch(`/submissions/test/${CONTEST_SLUG}/${QUESTION_ID}/`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+            body: JSON.stringify({source_code: code, language: lang, is_run: !isSubmit, custom_input: customInput}),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) { showOutput(data.error, 'err'); return; }
+            pollResult(data.submission_id, isSubmit);
+        })
+        .catch(e => showOutput('Error: ' + e.message, 'err'))
+        .finally(() => { btn.disabled = false; btn.innerHTML = orig; });
+    }
+
+    function pollResult(subId, isSubmit) {
+        let attempts = 0;
+        const poll = setInterval(() => {
+            fetch(`/submissions/status/${subId}/`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.verdict === 'pending' || data.verdict === 'queued' || data.verdict === 'running') {
+                    setMeta(`/ ${data.verdict}… (attempt ${attempts+1})`);
+                    if (++attempts > 30) { clearInterval(poll); showOutput('Execution timed out', 'err'); setMeta('/ timed out'); }
+                    return;
+                }
+                clearInterval(poll);
+                setMeta(`/ ${data.verdict_display || data.verdict}`);
+                if (isSubmit) showResults(data);
+                else showOutput(data.runtime_output || data.compiler_output || 'No output');
+            });
+        }, 1000);
+    }
+
+    function showOutput(text, cls) {
+        showTab('output');
+        const el = document.getElementById('tab-output');
+        el.innerHTML = '';
+        const pre = document.createElement('div');
+        if (cls) pre.className = cls;
+        pre.style.whiteSpace = 'pre-wrap';
+        pre.textContent = text;
+        el.appendChild(pre);
+    }
+
+    function showResults(data) {
+        showTab('results');
+        const el = document.getElementById('tab-results');
+        let html = `<div class="verdict verdict-${data.verdict}">${data.verdict_display || data.verdict}</div>`;
+        html += `<div class="t-mono t-small" style="margin-bottom: 12px;">Score: <span class="t-signal">${data.score}</span> · ${data.passed_test_cases}/${data.total_test_cases} cases passed`;
+        if (data.execution_time_ms) html += ` · ${data.execution_time_ms}ms`;
+        html += `</div>`;
+        if (data.test_case_results) {
+            html += '<div class="tc-strip">';
+            data.test_case_results.forEach((tc, i) => {
+                html += `<span class="tc-chip ${tc.passed ? 'pass' : 'fail'}">TC${String(i+1).padStart(2,'0')}</span>`;
+            });
+            html += '</div>';
+            data.test_case_results.forEach((tc, i) => {
+                html += `<div class="testcase-result ${tc.passed ? 'pass' : 'fail'}">
+                    <div class="label">TC#${String(i+1).padStart(2,'0')} · ${tc.verdict}${tc.time_ms ? ' · ' + tc.time_ms + 'ms' : ''}</div>
+                    ${!tc.is_hidden && tc.actual_output ? '<div>output: ' + tc.actual_output + '</div>' : ''}
+                </div>`;
+            });
+        }
+        el.innerHTML = html;
+    }
+
+    const editor = document.getElementById('code-editor');
+    if (editor) {
+        editor.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 4;
+            }
+        });
+    }
+
+    document.getElementById('language-select')?.addEventListener('change', function() {
+        const newLang = this.value;
+        const editorEl = document.getElementById('code-editor');
+        if (!editorEl) return;
+        if (confirm('Changing the language will overwrite your current code with the default template. Continue?')) {
+            let starterCode = {};
+            try { starterCode = JSON.parse(document.getElementById('starter-code-data').textContent); } catch (e) {}
+            editorEl.value = starterCode[newLang] || '# Write your code here';
+        }
+    });
+    {% endif %}
+
+    {% if not preview_mode %}
+    const DEADLINE = '{{ deadline_timestamp }}';
     const MAX_VIOLATIONS = {{ contest.max_violations }};
 
     function updateTimer() {
@@ -376,17 +541,6 @@
         el.innerHTML = html;
     }
 
-    function showTab(name, evt) {
-        document.querySelectorAll('.ide-console-tab').forEach(t => t.classList.remove('active'));
-        ['output','input','results'].forEach(t => {
-            const el = document.getElementById('tab-'+t);
-            if (el) el.classList.add('hidden');
-        });
-        document.getElementById('tab-'+name).classList.remove('hidden');
-        const targetTab = document.querySelector(`.ide-console-tab[data-tab="${name}"]`);
-        if (targetTab) targetTab.classList.add('active');
-    }
-
     function submitMCQ() {
         const selected = Array.from(document.querySelectorAll('input[name="mcq_answer"]:checked')).map(i => i.value);
         fetch(`/submissions/mcq/${CONTEST_SLUG}/${QUESTION_ID}/`, {
@@ -403,34 +557,103 @@
         }).then(r => r.json()).then(d => alert(d.status === 'submitted' ? 'Answer saved' : 'Error'));
     }
 
-    // Auto-save drafts
-    setInterval(() => {
-        const code = document.getElementById('code-editor')?.value;
-        if (!code || !QUESTION_ID) return;
-        const lang = document.getElementById('language-select')?.value || 'python';
-        fetch(`/submissions/draft/${CONTEST_SLUG}/${QUESTION_ID}/`, {
-            method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
-            body: JSON.stringify({source_code: code, language: lang}),
-        }).catch(() => {});
-    }, 30000);
+    // ─── Per-language code cache ─────────────────────────────────────────
+    // Loaded once from server-side drafts, then kept in memory as candidate types.
+    // Structure: { [lang]: codeString }
+    let codeCache = {};
+    try {
+        const raw = document.getElementById('drafts-by-lang-data');
+        if (raw) codeCache = JSON.parse(raw.textContent) || {};
+    } catch(e) {}
 
-    // Language change
+    let starterCode = {};
+    try { starterCode = JSON.parse(document.getElementById('starter-code-data')?.textContent || '{}'); } catch(e) {}
+
+    function getCurrentLang() {
+        return document.getElementById('language-select')?.value || 'python';
+    }
+
+    function setSaveStatus(text, color) {
+        const el = document.getElementById('save-status');
+        if (el) { el.textContent = text; el.style.color = color || 'var(--chalk-4)'; }
+    }
+
+    // Save current editor contents for a specific language to the server
+    function saveDraft(lang, code, silent) {
+        if (!QUESTION_ID || !code) return Promise.resolve();
+        if (!silent) setSaveStatus('/ saving…', 'var(--amber, #f59e0b)');
+        return fetch(`/submissions/draft/${CONTEST_SLUG}/${QUESTION_ID}/`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+            body: JSON.stringify({source_code: code, language: lang}),
+        }).then(() => {
+            if (!silent) setSaveStatus('/ saved ✓', 'var(--signal, #22c55e)');
+            setTimeout(() => setSaveStatus('/ autosave · on', 'var(--chalk-4)'), 2000);
+        }).catch(() => {
+            if (!silent) setSaveStatus('/ save failed', 'var(--red, #ef4444)');
+        });
+    }
+
+    // Save current language's code to cache + server immediately
+    function flushCurrentCode(silent) {
+        const editor = document.getElementById('code-editor');
+        if (!editor) return Promise.resolve();
+        const lang = getCurrentLang();
+        const code = editor.value;
+        codeCache[lang] = code;  // always update cache
+        return saveDraft(lang, code, silent);
+    }
+
+    // ─── Language switcher — save current first, then restore or use starter ──
     let isConfirming = false;
     document.getElementById('language-select')?.addEventListener('change', function() {
         const newLang = this.value;
-        const editor = document.getElementById('code-editor');
-        if (!editor) return;
-        isConfirming = true;
-        const userAgreed = confirm('Changing the language will overwrite your current code with the default template. Continue?');
-        setTimeout(() => { isConfirming = false; }, 500);
-        if (userAgreed) {
-            let starterCode = {};
-            try { starterCode = JSON.parse(document.getElementById('starter-code-data').textContent); } catch (e) {}
-            editor.value = starterCode[newLang] || '# Write your code here';
+        const editorEl = document.getElementById('code-editor');
+        if (!editorEl) return;
+
+        // Save the code we're leaving immediately (silent)
+        const prevLang = editorEl.dataset.currentLang || getCurrentLang();
+        codeCache[prevLang] = editorEl.value;
+        saveDraft(prevLang, editorEl.value, true);
+
+        // Restore the new language from cache, or fall back to starter code
+        if (codeCache[newLang] !== undefined && codeCache[newLang] !== '') {
+            editorEl.value = codeCache[newLang];
+            setSaveStatus('/ restored from draft', 'var(--signal, #22c55e)');
+            setTimeout(() => setSaveStatus('/ autosave · on', 'var(--chalk-4)'), 2500);
+        } else {
+            editorEl.value = starterCode[newLang] || '// Write your code here';
+            setSaveStatus('/ starter loaded', 'var(--chalk-4)');
         }
+        editorEl.dataset.currentLang = newLang;
     });
 
-    // Tab/key support in editor
+    // Tag the editor with the current language so the change handler can read it
+    const editorInit = document.getElementById('code-editor');
+    if (editorInit) editorInit.dataset.currentLang = getCurrentLang();
+
+    // ─── Debounced save on typing (3s after last keystroke) ──────────────
+    let debounceTimer = null;
+    document.getElementById('code-editor')?.addEventListener('input', function() {
+        const lang = getCurrentLang();
+        codeCache[lang] = this.value;  // update cache instantly
+        clearTimeout(debounceTimer);
+        setSaveStatus('/ unsaved changes', 'var(--amber, #f59e0b)');
+        debounceTimer = setTimeout(() => flushCurrentCode(false), 3000);
+    });
+
+    // ─── Periodic save every 30s as a safety net ─────────────────────────
+    setInterval(() => flushCurrentCode(true), 30000);
+
+    // ─── Save immediately when navigating to another question ────────────
+    document.querySelectorAll('.q-item').forEach(link => {
+        link.addEventListener('click', function(e) {
+            // Don't block — save silently in the background, then navigate
+            flushCurrentCode(true);
+            // Navigation proceeds normally (href)
+        });
+    });
+
     const editor = document.getElementById('code-editor');
     if (editor) {
         editor.addEventListener('keydown', function(e) {
@@ -496,6 +719,134 @@
     });
     {% endif %}
     {% endif %}
+    {% endif %}
+    </script>
+
+    <script>
+    // ═══════════════════════════════════════════════════════════════
+    //  CodeArena IDE — Drag-to-resize engine
+    //  Three resizable boundaries:
+    //    1. resizer-aside  : horizontal, moves .ide-problem width (left panel is fixed/toggle only)
+    //    2. resizer-bench  : horizontal, moves .ide-problem vs .ide-editor-col
+    //    3. resizer-console: vertical,   moves .ide-editor-area vs .ide-console height
+    // ═══════════════════════════════════════════════════════════════
+
+    const STORE_KEY = 'ca-ide-layout-{{ contest.slug }}';
+
+    function saveLayout() {
+        try {
+            const prob = document.getElementById('ide-problem');
+            const cons = document.getElementById('ide-console');
+            if (!prob || !cons) return;
+            localStorage.setItem(STORE_KEY, JSON.stringify({
+                problemW: prob.style.width,
+                consoleH: cons.style.height,
+                asideCollapsed: document.getElementById('ide-aside')?.classList.contains('collapsed'),
+            }));
+        } catch(e) {}
+    }
+
+    function restoreLayout() {
+        try {
+            const data = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+            const prob = document.getElementById('ide-problem');
+            const cons = document.getElementById('ide-console');
+            if (prob && data.problemW) prob.style.width = data.problemW;
+            if (cons && data.consoleH) cons.style.height = data.consoleH;
+            if (data.asideCollapsed) {
+                const aside = document.getElementById('ide-aside');
+                if (aside) {
+                    aside.classList.add('collapsed');
+                    const toggleBtn = document.getElementById('aside-toggle');
+                    if (toggleBtn) {
+                        const svg = toggleBtn.querySelector('svg');
+                        if (svg) svg.style.transform = 'rotate(0deg)';
+                    }
+                }
+            }
+        } catch(e) {}
+    }
+
+    // ── Generic drag helper ──────────────────────────────────────────
+    function makeDraggable(resizerEl, onDrag) {
+        if (!resizerEl) return;
+        let startX, startY, dragging = false;
+
+        resizerEl.addEventListener('pointerdown', function(e) {
+            e.preventDefault();
+            dragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            resizerEl.setPointerCapture(e.pointerId);
+            resizerEl.classList.add('dragging');
+            document.body.style.userSelect = 'none';
+            document.body.style.cursor = resizerEl.classList.contains('ide-resizer-v')
+                ? 'col-resize' : 'row-resize';
+        });
+
+        resizerEl.addEventListener('pointermove', function(e) {
+            if (!dragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            startX = e.clientX;
+            startY = e.clientY;
+            onDrag(dx, dy);
+            saveLayout();
+        });
+
+        resizerEl.addEventListener('pointerup', function(e) {
+            if (!dragging) return;
+            dragging = false;
+            resizerEl.classList.remove('dragging');
+            document.body.style.userSelect = '';
+            document.body.style.cursor = '';
+        });
+    }
+
+    // ── Resizer 1: problem ↔ editor  (horizontal) ───────────────────
+    // Dragging moves the right boundary of .ide-problem
+    makeDraggable(document.getElementById('resizer-bench'), function(dx) {
+        const prob = document.getElementById('ide-problem');
+        const bench = document.getElementById('ide-bench');
+        if (!prob || !bench) return;
+        const currentW = prob.getBoundingClientRect().width;
+        const benchW   = bench.getBoundingClientRect().width;
+        const newW = Math.max(200, Math.min(benchW - 240, currentW + dx));
+        prob.style.width = newW + 'px';
+        prob.style.flexShrink = '0';
+    });
+
+    // ── Resizer 2: editor ↔ console  (vertical) ─────────────────────
+    // Dragging moves the top boundary of .ide-console
+    makeDraggable(document.getElementById('resizer-console'), function(dx, dy) {
+        const cons       = document.getElementById('ide-console');
+        const editorCol  = document.getElementById('ide-editor-col');
+        if (!cons || !editorCol) return;
+        const currentH = cons.getBoundingClientRect().height;
+        const totalH   = editorCol.getBoundingClientRect().height;
+        const newH = Math.max(36, Math.min(totalH - 80, currentH - dy));
+        cons.style.height = newH + 'px';
+        cons.style.flexShrink = '0';
+    });
+
+    // ── Left panel toggle ────────────────────────────────────────────
+    function toggleAside() {
+        const aside = document.getElementById('ide-aside');
+        if (!aside) return;
+        const isNowCollapsed = aside.classList.toggle('collapsed');
+
+        // Flip the chevron direction by rotating the icon in the toggle button
+        const toggleBtn = document.getElementById('aside-toggle');
+        if (toggleBtn) {
+            const svg = toggleBtn.querySelector('svg');
+            if (svg) svg.style.transform = isNowCollapsed ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+
+        saveLayout();
+    }
+
+    // Restore persisted layout after DOM is ready
+    restoreLayout();
     </script>
 </body>
 </html>

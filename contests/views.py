@@ -445,7 +445,7 @@ def contest_take(request, slug):
     if not current_question and questions:
         current_question = questions[0]
 
-    # Get saved drafts
+    # Get saved drafts (for sidebar answered/unanswered indicator + MCQ/subjective restore)
     from submissions.models import CodeDraft, MCQAnswer, SubjectiveAnswer
     drafts = {}
     for q in questions:
@@ -465,13 +465,80 @@ def contest_take(request, slug):
             ).first()
             drafts[q.id] = answer
 
+    # Build per-language draft map for the current coding question.
+    # Shape: { "python": "def foo()...", "cpp": "#include...", ... }
+    # Sent to the template as a JSON blob so the JS code-cache is pre-populated
+    # for ALL languages without needing extra API calls on language switch.
+    drafts_by_lang = {}
+    if current_question and current_question.question_type == 'coding':
+        all_lang_drafts = CodeDraft.objects.filter(
+            user=request.user, contest=contest, question=current_question
+        )
+        for d in all_lang_drafts:
+            drafts_by_lang[d.language] = d.source_code
+
+    # Get visible (sample) test cases for the current coding question
+    sample_test_cases = []
+    if current_question and current_question.question_type == 'coding':
+        try:
+            coding = current_question.coding_detail
+            sample_test_cases = list(
+                coding.test_cases.filter(is_hidden=False).order_by('order')
+            )
+        except Exception:
+            pass
+
     context = {
         'contest': contest,
         'session': session,
         'questions': questions,
         'current_question': current_question,
         'drafts': drafts,
+        'drafts_by_lang': drafts_by_lang,
         'deadline_timestamp': session.deadline.isoformat() if session.deadline else None,
+        'sample_test_cases': sample_test_cases,
+    }
+    return render(request, 'contests/take.html', context)
+
+
+# ─── Preview Contest (Creator Only) ──────────────────────────────────────────────
+
+@login_required
+@recruiter_or_admin_required
+def contest_preview(request, slug):
+    """Read-only preview of the IDE exactly as candidates will see it."""
+    contest = get_object_or_404(Contest, slug=slug)
+    if contest.created_by != request.user and not request.user.is_admin:
+        return HttpResponseForbidden('Not authorized')
+
+    questions = list(contest.questions.all().order_by('order'))
+    question_id = request.GET.get('q')
+    current_question = None
+
+    if question_id:
+        current_question = next((q for q in questions if str(q.id) == question_id), None)
+    if not current_question and questions:
+        current_question = questions[0]
+
+    sample_test_cases = []
+    if current_question and current_question.question_type == 'coding':
+        try:
+            coding = current_question.coding_detail
+            sample_test_cases = list(
+                coding.test_cases.filter(is_hidden=False).order_by('order')
+            )
+        except Exception:
+            pass
+
+    context = {
+        'contest': contest,
+        'session': None,
+        'questions': questions,
+        'current_question': current_question,
+        'drafts': {},
+        'deadline_timestamp': None,
+        'sample_test_cases': sample_test_cases,
+        'preview_mode': True,
     }
     return render(request, 'contests/take.html', context)
 

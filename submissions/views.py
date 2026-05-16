@@ -212,6 +212,59 @@ def submit_subjective(request, contest_slug, question_id):
 
 
 @login_required
+@require_POST
+def test_code(request, contest_slug, question_id):
+    """Run/submit code as the contest creator for testing purposes."""
+    contest = get_object_or_404(Contest, slug=contest_slug)
+    question = get_object_or_404(Question, id=question_id, contest=contest, question_type='coding')
+
+    if contest.created_by != request.user and not request.user.is_admin:
+        return JsonResponse({'error': 'Not authorized'}, status=403)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    language = data.get('language', 'python')
+    source_code = data.get('source_code', '')
+    is_run = data.get('is_run', False)
+
+    if not source_code.strip():
+        return JsonResponse({'error': 'Empty code'}, status=400)
+
+    submission = Submission.objects.create(
+        user=request.user,
+        contest=contest,
+        question=question,
+        session=None,
+        language=language,
+        source_code=source_code,
+        verdict='queued',
+        max_score=question.marks,
+        submission_number=0,
+        is_final=not is_run,
+    )
+
+    custom_input = data.get('custom_input', '')
+
+    try:
+        from execution_engine.tasks import execute_code
+        task = execute_code.delay(submission.id, is_run, custom_input)
+        submission.task_id = task.id
+        submission.save(update_fields=['task_id'])
+    except Exception:
+        from execution_engine.executor import run_code_sync
+        run_code_sync(submission, is_run, custom_input)
+
+    return JsonResponse({
+        'submission_id': submission.id,
+        'status': submission.verdict,
+        'message': 'Test execution started',
+    })
+
+
+@login_required
 def submission_status(request, submission_id):
     """Check submission status (polling endpoint)."""
     submission = get_object_or_404(Submission, id=submission_id, user=request.user)

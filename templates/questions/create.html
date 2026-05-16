@@ -67,17 +67,11 @@
         <span class="tag-id">/ 02 — CODING</span>
         <div class="module-head"><h3>Coding details</h3></div>
         <div class="module-body">
-            <div class="form-group"><label>Problem statement</label>{{ coding_form.problem_statement }}</div>
-            <div class="grid-2">
-                <div class="form-group"><label>Input format</label>{{ coding_form.input_format }}</div>
-                <div class="form-group"><label>Output format</label>{{ coding_form.output_format }}</div>
+            <div class="form-group">
+                <label>Problem description</label>
+                {{ coding_form.problem_statement }}
+                <div class="helptext">Write everything here: problem statement, input/output format, constraints, examples, and explanation. Supports HTML.</div>
             </div>
-            <div class="form-group"><label>Constraints</label>{{ coding_form.constraints }}</div>
-            <div class="grid-2">
-                <div class="form-group"><label>Sample input</label>{{ coding_form.sample_input }}</div>
-                <div class="form-group"><label>Sample output</label>{{ coding_form.sample_output }}</div>
-            </div>
-            <div class="form-group"><label>Explanation</label>{{ coding_form.explanation }}</div>
             <div class="grid-2">
                 <div class="form-group"><label>Time limit (s)</label>{{ coding_form.time_limit_seconds }}</div>
                 <div class="form-group"><label>Memory limit (MB)</label>{{ coding_form.memory_limit_mb }}</div>

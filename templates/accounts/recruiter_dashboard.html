@@ -38,11 +38,71 @@
     </div>
 </div>
 
+{% if draft_contest_list %}
+<section class="module rise rise-2 mb-4" style="border-left: 3px solid var(--amber, #f59e0b);">
+    <div class="module-head">
+        <div class="row-tight">
+            <svg class="i" style="color:var(--amber, #f59e0b);"><use href="#i-edit"/></svg>
+            <h3>Unpublished Drafts</h3>
+            <span class="badge badge-warning" style="margin-left:8px;">{{ draft_contest_list|length }}</span>
+        </div>
+        <a href="{% url 'contests:create' %}" class="btn btn-primary btn-sm">
+            <svg class="i"><use href="#i-plus"/></svg>
+            <span>New contest</span>
+        </a>
+    </div>
+    <div class="module-body tight">
+        <div style="padding: 10px 20px 4px; background: rgba(245,158,11,0.06); border-bottom: 1px solid var(--line-faint);">
+            <span class="t-mono t-micro" style="color: var(--amber, #f59e0b);">
+                ⚠ These contests are saved but not visible to candidates yet. Publish when ready.
+            </span>
+        </div>
+        {% for c in draft_contest_list %}
+        <div style="padding: 18px 20px; border-bottom: 1px solid var(--line-faint); display:flex; align-items:center; justify-content:space-between; gap:16px;">
+            <div style="min-width:0; flex:1;">
+                <div class="t-mono t-micro" style="color:var(--chalk-4); margin-bottom:4px;">/ {{ c.slug|upper }}</div>
+                <div style="font-size:0.98rem; font-weight:600; color:var(--chalk-0); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ c.title }}</div>
+                <div class="t-mono t-small t-muted" style="margin-top:4px;">
+                    {{ c.start_time|date:"M d, Y · H:i" }} → {{ c.end_time|date:"M d, Y · H:i" }}
+                    &nbsp;·&nbsp; {{ c.duration_minutes }}m
+                    &nbsp;·&nbsp; Created {{ c.created_at|timesince }} ago
+                </div>
+            </div>
+            <div class="row-tight" style="flex-shrink:0; gap:8px;">
+                <a href="{% url 'contests:edit' slug=c.slug %}" class="btn btn-ghost btn-sm" title="Edit details">
+                    <svg class="i"><use href="#i-edit"/></svg>
+                    <span>Edit</span>
+                </a>
+                <a href="{% url 'contests:manage' slug=c.slug %}" class="btn btn-secondary btn-sm" title="Manage questions & settings">
+                    <svg class="i"><use href="#i-arena"/></svg>
+                    <span>Manage</span>
+                </a>
+                <form method="post" action="{% url 'contests:publish' slug=c.slug %}" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="publish">
+                    <button type="submit" class="btn btn-primary btn-sm" title="Publish contest">
+                        <svg class="i"><use href="#i-check"/></svg>
+                        <span>Publish</span>
+                    </button>
+                </form>
+                <form method="post" action="{% url 'contests:delete' slug=c.slug %}" style="display:inline;" onsubmit="return confirm('Delete draft \'{{ c.title }}\'? This cannot be undone.');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-sm" title="Delete draft">
+                        <svg class="i"><use href="#i-trash"/></svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
 <div class="grid-12">
     <div style="grid-column: span 8;" class="rise rise-2">
         <section class="module">
             <div class="module-head">
-                <h3>Contest registry</h3>
+                <h3>Published contests</h3>
                 <a href="{% url 'contests:list' %}" class="btn btn-ghost btn-sm">
                     <span>View all</span>
                     <svg class="i"><use href="#i-arrow-r"/></svg>
@@ -58,7 +118,7 @@
                             <div class="t-mono t-small t-muted" style="margin-top:4px;">{{ c.start_time|date:"M d, Y · H:i" }} → {{ c.end_time|date:"M d, Y · H:i" }}</div>
                         </div>
                         <div class="row-tight">
-                            <span class="badge {% if c.status == 'published' %}badge-success{% elif c.status == 'draft' %}badge-warning{% else %}badge-secondary{% endif %}">{{ c.get_status_display }}</span>
+                            <span class="badge badge-success">{{ c.get_status_display }}</span>
                             <svg class="i" style="color:var(--chalk-3);"><use href="#i-chev"/></svg>
                         </div>
                     </div>
@@ -66,8 +126,8 @@
                 {% empty %}
                 <div class="empty" style="margin: 20px;">
                     <svg class="i icon"><use href="#i-arena"/></svg>
-                    <h3>No contests yet</h3>
-                    <p>Provision your first contest to get started.</p>
+                    <h3>No published contests yet</h3>
+                    <p>Create a draft and publish it when it's ready.</p>
                     <div style="margin-top: 20px;">
                         <a href="{% url 'contests:create' %}" class="btn btn-primary">
                             <svg class="i"><use href="#i-plus"/></svg>

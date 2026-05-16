@@ -14,6 +14,19 @@ from contests.models import Contest
 from accounts.decorators import recruiter_or_admin_required
 
 
+def _type_form_detail_bound_fields(question, type_form):
+    """Fields for the type-specific section (excludes coding language blocks shown in META)."""
+    if not type_form:
+        return None
+    if question.question_type == 'coding':
+        skip = {'allowed_languages'}
+        for code, _ in CodingQuestion.LANGUAGE_CHOICES:
+            skip.add(f'{code}_starter_code')
+            skip.add(f'{code}_driver_code')
+        return [type_form[name] for name in type_form.fields if name not in skip]
+    return [type_form[name] for name in type_form.fields]
+
+
 @login_required
 @recruiter_or_admin_required
 def question_create(request, contest_slug):
@@ -159,6 +172,8 @@ def question_edit(request, pk):
     context = {
         'form': form,
         'type_form': type_form,
+        'coding_form': type_form if question.question_type == 'coding' else None,
+        'type_form_detail_fields': _type_form_detail_bound_fields(question, type_form),
         'question': question,
         'contest': contest,
         'test_cases': test_cases,
@@ -218,6 +233,38 @@ def testcase_delete(request, pk):
     tc.delete()
     messages.success(request, 'Test case deleted.')
     return redirect('questions:edit', pk=question_pk)
+
+
+@login_required
+@recruiter_or_admin_required
+def testcase_edit(request, pk):
+    """Edit an existing test case (input, output, visibility, weight, description)."""
+    tc = get_object_or_404(TestCase, pk=pk)
+    question = tc.coding_question.question
+    contest = question.contest
+    if contest.created_by != request.user and not request.user.is_admin:
+        return HttpResponseForbidden()
+
+    if request.method == 'POST':
+        form = TestCaseForm(request.POST, instance=tc)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Test case updated.')
+            return redirect('questions:edit', pk=question.pk)
+        messages.error(request, 'Please fix the errors below.')
+    else:
+        form = TestCaseForm(instance=tc)
+
+    return render(
+        request,
+        'questions/testcase_edit.html',
+        {
+            'form': form,
+            'testcase': tc,
+            'question': question,
+            'contest': contest,
+        },
+    )
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────────

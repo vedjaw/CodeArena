@@ -33,6 +33,10 @@
             <svg class="i"><use href="#i-download"/></svg>
             <span>CSV</span>
         </a>
+        <a href="{% url 'contests:preview' slug=contest.slug %}" class="btn btn-secondary btn-sm" target="_blank">
+            <svg class="i"><use href="#i-eye"/></svg>
+            <span>Preview</span>
+        </a>
     </div>
 </div>
 

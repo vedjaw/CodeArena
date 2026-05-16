@@ -1,0 +1,48 @@
+{% extends "base/app.html" %}
+{% block title %}Edit test case #{{ testcase.order|stringformat:"02d" }} — {{ question.title }}{% endblock %}
+{% block crumb_label %}Test case · {{ question.title|truncatechars:24 }}{% endblock %}
+
+{% block app_content %}
+<div class="page-head">
+    <div>
+        <div class="eyebrow">/ {{ contest.slug|upper }} · TEST CASE</div>
+        <h1>Edit test case <span class="t-mono">#{{ testcase.order|stringformat:"02d" }}</span></h1>
+        <p class="sub t-mono">{{ question.title }}</p>
+    </div>
+    <a href="{% url 'questions:edit' pk=question.pk %}" class="btn btn-secondary">
+        <svg class="i"><use href="#i-arrow-l"/></svg>
+        <span>Back to question</span>
+    </a>
+</div>
+
+<section class="module">
+    <div class="module-head"><h3>Test case</h3></div>
+    <div class="module-body">
+        <form method="post" action="">
+            {% csrf_token %}
+            <div class="grid-2">
+                <div class="form-group"><label for="{{ form.input_data.id_for_label }}">Input</label>{{ form.input_data }}{% if form.input_data.errors %}<div class="t-danger t-small">{{ form.input_data.errors }}</div>{% endif %}</div>
+                <div class="form-group"><label for="{{ form.expected_output.id_for_label }}">Expected output</label>{{ form.expected_output }}{% if form.expected_output.errors %}<div class="t-danger t-small">{{ form.expected_output.errors }}</div>{% endif %}</div>
+            </div>
+            <div class="grid-3">
+                <div class="form-group"><label for="{{ form.description.id_for_label }}">Description</label>{{ form.description }}{% if form.description.errors %}<div class="t-danger t-small">{{ form.description.errors }}</div>{% endif %}</div>
+                <div class="form-group"><label for="{{ form.weight.id_for_label }}">Weight</label>{{ form.weight }}{% if form.weight.errors %}<div class="t-danger t-small">{{ form.weight.errors }}</div>{% endif %}</div>
+                <div class="form-check" style="margin-top:32px;">
+                    {{ form.is_hidden }}
+                    <label for="{{ form.is_hidden.id_for_label }}">Hidden from candidates</label>
+                </div>
+            </div>
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            {% endif %}
+            <div class="row-tight mt-3">
+                <button type="submit" class="btn btn-primary">
+                    <svg class="i"><use href="#i-check"/></svg>
+                    <span>Save test case</span>
+                </button>
+                <a href="{% url 'questions:edit' pk=question.pk %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}

@@ -32,20 +32,23 @@ class CodingQuestionForm(forms.ModelForm):
     class Meta:
         model = CodingQuestion
         fields = [
-            'problem_statement', 'constraints', 'input_format', 'output_format',
-            'sample_input', 'sample_output', 'explanation',
+            'problem_statement',
             'time_limit_seconds', 'memory_limit_mb', 'allowed_languages'
         ]
         widgets = {
-            'problem_statement': forms.Textarea(attrs={'class': 'form-input code-textarea', 'rows': 8}),
-            'constraints': forms.Textarea(attrs={'class': 'form-input', 'rows': 3}),
-            'input_format': forms.Textarea(attrs={'class': 'form-input', 'rows': 3}),
-            'output_format': forms.Textarea(attrs={'class': 'form-input', 'rows': 3}),
-            'sample_input': forms.Textarea(attrs={'class': 'form-input code-textarea', 'rows': 4}),
-            'sample_output': forms.Textarea(attrs={'class': 'form-input code-textarea', 'rows': 4}),
-            'explanation': forms.Textarea(attrs={'class': 'form-input', 'rows': 4}),
+            'problem_statement': forms.Textarea(attrs={
+                'class': 'form-input code-textarea',
+                'rows': 16,
+                'placeholder': 'Write the full problem here. HTML is supported.\n\nInclude: problem description, input/output format, constraints, examples, explanation, etc.',
+            }),
             'time_limit_seconds': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.5', 'min': '0.5', 'max': '30'}),
             'memory_limit_mb': forms.NumberInput(attrs={'class': 'form-input', 'min': '16', 'max': '1024'}),
+        }
+        labels = {
+            'problem_statement': 'Problem description',
+        }
+        help_texts = {
+            'problem_statement': 'Write everything here: problem statement, input/output format, constraints, examples, and explanation. Supports HTML.',
         }
 
     def __init__(self, *args, **kwargs):
